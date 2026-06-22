@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Tellak",
+  "version": "0.1.15",
+  "identifier": "com.kaan.tellak",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Tellak",
+        "width": 960,
+        "height": 680,
+        "minWidth": 800,
+        "minHeight": 680
+      }
+    ],
+    "security": {
+      "csp": null,
+      "capabilities": ["default"],
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "/Applications/**",
+          "~/Applications/**",
+          "/System/Applications/**",
+          "$CACHE/tellak/**",
+          "$CACHE/tellak/trash_icons/**"
+        ]
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDdBOERCQUU0MTI2QjgzMzEKUldReGcyc1M1THFOZW1ZUTlrb0pTMzkxRHQ0YThUNmZia0pUK2pwakNEelM3NEZ5N01qQUFXd2wK",
+      "endpoints": [
+        "https://github.com/kaanses/Tellak/releases/latest/download/latest.json"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {},
+    "macOS": {
+      "entitlements": "Entitlements.plist",
+      "signingIdentity": null,
+      "minimumSystemVersion": "12.0"
+    }
+  }
+}

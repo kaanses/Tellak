@@ -1,0 +1,194 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            arch: aarch64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Import Apple certificate
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERT_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 32)
+
+          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o $CERT_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERT_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+      - name: Build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        # Only the .app (+ updater artifacts). We build the DMG ourselves with
+        # dmgbuild below — Tauri's Finder-scripted DMG bundler can't apply the
+        # branded background/layout on a headless CI runner (no .DS_Store).
+        run: npx tauri build --target ${{ matrix.target }} --bundles app
+
+      # Branded installer DMG via dmgbuild (pure-Python, writes .DS_Store
+      # directly — works headless, unlike Tauri's Finder-scripted bundler).
+      # Runs BEFORE keychain cleanup because codesigning the DMG needs it.
+      - name: Build installer DMG
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ARCH: ${{ matrix.arch }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          BUNDLE="src-tauri/target/${TARGET}/release/bundle"
+
+          # Extract the signed + notarized + stapled app from the updater artifact.
+          mkdir -p dmg-staging
+          tar xzf "${BUNDLE}/macos/Tellak.app.tar.gz" -C dmg-staging
+
+          # dmgbuild in an isolated venv (runner Python is externally-managed).
+          python3 -m venv .dmgvenv
+          .dmgvenv/bin/pip install --quiet dmgbuild
+
+          DMG="Tellak_${VERSION}_${ARCH}.dmg"
+          APP_PATH="$PWD/dmg-staging/Tellak.app" \
+          BACKGROUND="$PWD/src-tauri/dmg/background.png" \
+            .dmgvenv/bin/python -m dmgbuild -s src-tauri/dmg/dmg_settings.py "Tellak" "$DMG"
+
+          # Sign, notarize, staple the DMG so Gatekeeper opens it without warnings.
+          codesign --force --sign "$APPLE_SIGNING_IDENTITY" "$DMG"
+          xcrun notarytool submit "$DMG" \
+            --apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          xcrun stapler staple "$DMG"
+
+          mkdir -p dist-artifacts
+          cp "$DMG" "dist-artifacts/$DMG"
+          # Stable, version-less copy → permanent direct-download URL:
+          #   /releases/latest/download/Tellak.dmg
+          cp "$DMG" "dist-artifacts/Tellak.dmg"
+
+      - name: Cleanup keychain
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
+
+      - name: Stage updater artifacts
+        env:
+          ARCH: ${{ matrix.arch }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          BUNDLE="src-tauri/target/${TARGET}/release/bundle"
+          mkdir -p dist-artifacts
+          # Updater artifacts (createUpdaterArtifacts must be on) — fail loudly if missing
+          cp "${BUNDLE}/macos/Tellak.app.tar.gz"     "dist-artifacts/Tellak_${VERSION}_${ARCH}.app.tar.gz"
+          cp "${BUNDLE}/macos/Tellak.app.tar.gz.sig" "dist-artifacts/Tellak_${VERSION}_${ARCH}.app.tar.gz.sig"
+          ls -la dist-artifacts
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: tellak-${{ matrix.arch }}
+          path: dist-artifacts/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create latest.json
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          BASE="https://github.com/${REPO}/releases/download/v${VERSION}"
+          AARCH64_SIG=$(cat "artifacts/Tellak_${VERSION}_aarch64.app.tar.gz.sig" 2>/dev/null || echo "")
+          jq -n \
+            --arg version  "$VERSION" \
+            --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg notes    "See https://github.com/${REPO}/releases/tag/v${VERSION} for changes." \
+            --arg arm_sig  "$AARCH64_SIG" \
+            --arg arm_url  "${BASE}/Tellak_${VERSION}_aarch64.app.tar.gz" \
+            '{version:$version,notes:$notes,pub_date:$pub_date,platforms:{"darwin-aarch64":{signature:$arm_sig,url:$arm_url}}}' \
+            > latest.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Tellak ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            artifacts/*.app.tar.gz
+            artifacts/*.app.tar.gz.sig
+            artifacts/*.dmg
+            latest.json
+
+      # Rebuild the marketing site so its "Latest release" stat picks up the new
+      # version (site fetches the latest release tag at build time). Uses a
+      # Railway project token scoped to the tellak-site service.
+      - name: Refresh marketing site
+        continue-on-error: true
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          npm i -g @railway/cli
+          railway redeploy -s tellak-site -y

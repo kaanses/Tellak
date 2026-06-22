@@ -1,0 +1,23 @@
+pub mod status;
+pub mod clean;
+pub mod uninstall;
+pub mod analyze;
+pub mod version;
+pub mod startup;
+pub mod duplicates;
+pub mod trash;
+pub mod ram;
+pub mod privacy;
+pub mod disk_browser;
+
+pub use status::*;
+pub use clean::*;
+pub use uninstall::*;
+pub use analyze::*;
+pub use version::*;
+pub use startup::*;
+pub use duplicates::*;
+pub use trash::*;
+pub use ram::*;
+pub use privacy::*;
+pub use disk_browser::*;

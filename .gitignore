@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+dist-ssr/
+target/
+src-tauri/target/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Tauri
+src-tauri/target/
+src-tauri/WixTools/
+
+# Rust
+# Cargo.lock IS committed — this is a binary app, we want reproducible CI builds
+**/*.rs.bk
+
+# Mole resources (don't ignore, we need it bundled)
+# src-tauri/resources/mole/
+
+# Cache
+.cache/
