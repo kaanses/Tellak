@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../../shared/store/toastStore";
+import { useI18n } from "../../shared/i18n";
 
 interface LoginItem {
     name: string;
@@ -16,10 +17,10 @@ const card = {
     border: "1px solid rgba(245,237,214,0.1)",
 } as const;
 
-const LOC_LABEL: Record<string, string> = {
-    user:   "Kullanıcı Ajanları",
-    global: "Sistem Ajanları",
-    daemon: "Daemon'lar",
+const LOC_LABEL_KEY: Record<string, string> = {
+    user:   "startup.locUser",
+    global: "startup.locGlobal",
+    daemon: "startup.locDaemon",
 };
 
 const LOC_COLOR: Record<string, string> = {
@@ -31,10 +32,11 @@ const LOC_COLOR: Record<string, string> = {
 function Toggle({ enabled, onChange, disabled }: {
     enabled: boolean; onChange: () => void; disabled?: boolean;
 }) {
+    const { t } = useI18n();
     return (
         <button
             onClick={() => !disabled && onChange()}
-            title={disabled ? "Sistem öğesi — değiştirilemez" : enabled ? "Devre dışı bırak" : "Etkinleştir"}
+            title={disabled ? t("startup.toggleLocked") : enabled ? t("startup.toggleDisable") : t("startup.toggleEnable")}
             style={{
                 width: 38, height: 21, borderRadius: 11,
                 border: "none", padding: 0, flexShrink: 0,
@@ -76,6 +78,7 @@ function RowSkeleton() {
 }
 
 export default function StartupPage() {
+    const { t } = useI18n();
     const toast = useToast();
     const [items,    setItems]    = useState<LoginItem[]>([]);
     const [loading,  setLoading]  = useState(true);
@@ -120,7 +123,7 @@ export default function StartupPage() {
         } catch (e) {
             const msg = String(e);
             toast.error(item.location === "daemon"
-                ? `${msg} — Elle silmek için: sudo rm '${item.path}'`
+                ? `${msg}${t("startup.manualDeleteHint", { path: item.path })}`
                 : msg);
         }
         setDeleting(null);
@@ -138,7 +141,7 @@ export default function StartupPage() {
 
             {/* Page title */}
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#F5EDD6", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", letterSpacing: "-0.02em" }}>
-                Başlangıç
+                {t("startup.title")}
             </h1>
 
             {/* Toolbar */}
@@ -148,7 +151,7 @@ export default function StartupPage() {
                         type="text"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Başlangıç öğesi ara…"
+                        placeholder={t("startup.searchPlaceholder")}
                         style={{
                             flex: 1, padding: "8px 14px",
                             background: "rgba(245,237,214,0.04)",
@@ -174,7 +177,7 @@ export default function StartupPage() {
                     onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "rgba(245,237,214,0.1)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "rgba(245,237,214,0.05)"; }}
                 >
-                    {loading ? "Yükleniyor…" : "Yenile"}
+                    {loading ? t("startup.loading") : t("startup.refresh")}
                 </button>
             </div>
 
@@ -197,10 +200,10 @@ export default function StartupPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <div style={{ width: 5, height: 5, borderRadius: 3, background: color, flexShrink: 0 }} />
                             <span style={{ fontSize: 11, fontWeight: 600, color, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                                {LOC_LABEL[loc]}
+                                {t(LOC_LABEL_KEY[loc])}
                             </span>
                             <span style={{ fontSize: 10, color: "rgba(245,237,214,0.22)" }}>
-                                {group.length} öğe
+                                {t("startup.itemCount", { count: group.length })}
                             </span>
                         </div>
 
@@ -212,7 +215,7 @@ export default function StartupPage() {
                                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ flexShrink: 0 }}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                     </svg>
-                                    Daemon'lar root olarak çalışır — geçiş anında başlatır/durdurur, yönetici gerektirir
+                                    {t("startup.daemonNote")}
                                 </div>
                             )}
 
@@ -244,7 +247,7 @@ export default function StartupPage() {
                                                         padding: "1px 5px", borderRadius: 4,
                                                         letterSpacing: "0.08em", fontWeight: 600,
                                                     }}>
-                                                        SİSTEM
+                                                        {t("startup.badgeSystem")}
                                                     </span>
                                                 )}
                                                 {item.location === "daemon" && !item.is_apple && (
@@ -266,7 +269,7 @@ export default function StartupPage() {
                                                         padding: "1px 5px", borderRadius: 4,
                                                         letterSpacing: "0.08em", fontWeight: 600,
                                                     }}>
-                                                        KAPALI
+                                                        {t("startup.badgeOff")}
                                                     </span>
                                                 )}
                                             </div>
@@ -303,7 +306,7 @@ export default function StartupPage() {
                                                             onMouseEnter={e => { e.currentTarget.style.background = "rgba(200,80,80,0.38)"; }}
                                                             onMouseLeave={e => { e.currentTarget.style.background = "rgba(200,80,80,0.22)"; }}
                                                         >
-                                                            {deleting === item.path ? "…" : "Sil"}
+                                                            {deleting === item.path ? "…" : t("startup.delete")}
                                                         </button>
                                                         <button
                                                             onClick={() => setConfirmDelete(null)}
@@ -332,7 +335,7 @@ export default function StartupPage() {
                                                         onMouseEnter={e => { if (deleting !== item.path) { e.currentTarget.style.background = "rgba(200,80,80,0.1)"; e.currentTarget.style.borderColor = "rgba(200,80,80,0.5)"; } }}
                                                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = deleting === item.path ? "rgba(245,237,214,0.06)" : "rgba(200,80,80,0.28)"; }}
                                                     >
-                                                        {deleting === item.path ? "…" : "Sil"}
+                                                        {deleting === item.path ? "…" : t("startup.delete")}
                                                     </button>
                                                 )
                                             )}
@@ -348,21 +351,21 @@ export default function StartupPage() {
             {/* No search results */}
             {!loading && items.length > 0 && filtered.length === 0 && (
                 <div style={{ textAlign: "center", padding: "48px 0", fontSize: 14, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.3)" }}>
-                    "{search}" ile eşleşen öğe yok
+                    {t("startup.noMatch", { search })}
                 </div>
             )}
 
             {/* Empty state */}
             {!loading && items.length === 0 && (
                 <div style={{ textAlign: "center", padding: "60px 0" }}>
-                    <p style={{ fontSize: 14, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.3)", margin: 0 }}>Başlangıç öğesi bulunamadı</p>
+                    <p style={{ fontSize: 14, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.3)", margin: 0 }}>{t("startup.empty")}</p>
                 </div>
             )}
 
             {/* Footer count */}
             {!loading && items.length > 0 && (
                 <div style={{ fontSize: 10, color: "rgba(245,237,214,0.18)", textAlign: "right" }}>
-                    {modifiable.length} değiştirilebilir · {filtered.length} toplam
+                    {t("startup.footerCount", { modifiable: modifiable.length, total: filtered.length })}
                 </div>
             )}
         </div>

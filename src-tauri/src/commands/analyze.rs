@@ -1143,7 +1143,7 @@ pub async fn delete_apfs_snapshots(names: Vec<String>) -> Result<String, String>
         }
 
         clear_junk_cache();
-        Ok(format!("{} anlık görüntü silindi", deleted))
+        Ok(format!("{} snapshots deleted", deleted))
     })
     .await
     .map_err(|e| e.to_string())?

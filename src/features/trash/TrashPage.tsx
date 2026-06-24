@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { useToast } from "../../shared/store/toastStore";
+import { useI18n } from "../../shared/i18n";
 
 interface TrashItem {
     name: string;
@@ -126,6 +127,7 @@ export default function TrashPage() {
     const [items,      setItems]     = useState<(TrashItem & { deleted?: boolean })[]>([]);
     const [loading,    setLoading]   = useState(true);
     const toast = useToast();
+    const { t } = useI18n();
     const [emptying,   setEmptying]  = useState(false);
     const [confirming, setConfirming]= useState(false);
     const [deleting,   setDeleting]  = useState<string | null>(null);
@@ -147,9 +149,9 @@ export default function TrashPage() {
     const handleRestore = async (item: TrashItem) => {
         setRestoring(item.path);
         try {
-            const msg = await invoke<string>("restore_trash_item", { path: item.path, name: item.name });
+            const where = await invoke<string>("restore_trash_item", { path: item.path, name: item.name });
             setItems(prev => prev.map(i => i.path === item.path ? { ...i, deleted: true } : i));
-            toast.success(msg);
+            toast.success(where === "desktop" ? t("trash.restoredDesktop") : t("trash.restoredOriginal"));
         } catch (e) { toast.error(String(e)); }
         setRestoring(null);
     };
@@ -184,7 +186,7 @@ export default function TrashPage() {
 
             {/* Page title */}
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#F5EDD6", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", letterSpacing: "-0.02em", flexShrink: 0 }}>
-                Çöp Kutusu
+                {t("trash.title")}
             </h1>
 
             {/* Summary bar */}
@@ -204,13 +206,13 @@ export default function TrashPage() {
                             fontFamily: "'New York', 'Iowan Old Style', Georgia, serif",
                             color: "#F5EDD6",
                         }}>
-                            {live.length > 0 ? humanizeBytes(totalSize) : "Tertemiz"}
+                            {live.length > 0 ? humanizeBytes(totalSize) : t("trash.empty")}
                         </span>
                     )}
                     {!loading && (
                         <span style={{ fontSize: 11, color: "rgba(245,237,214,0.32)" }}>
-                            {live.length} öğe
-                            {icloudCount > 0 && ` · ${icloudCount} iCloud'da`}
+                            {t("trash.itemCount", { count: live.length })}
+                            {icloudCount > 0 && ` · ${t("trash.inIcloud", { count: icloudCount })}`}
                         </span>
                     )}
                 </div>
@@ -229,7 +231,7 @@ export default function TrashPage() {
                         onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "rgba(245,237,214,0.1)"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "rgba(245,237,214,0.05)"; }}
                     >
-                        Yenile
+                        {t("trash.refresh")}
                     </button>
 
                     {live.length > 0 && !confirming && (
@@ -246,13 +248,13 @@ export default function TrashPage() {
                             onMouseEnter={e => { if (!emptying) e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                             onMouseLeave={e => { e.currentTarget.style.background = emptying ? "rgba(245,237,214,0.07)" : "#F5EDD6"; }}
                         >
-                            {emptying ? "Boşaltılıyor…" : "Çöp Kutusunu Boşalt"}
+                            {emptying ? t("trash.emptying") : t("trash.emptyTrash")}
                         </button>
                     )}
 
                     {live.length > 0 && confirming && (
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ fontSize: 11, color: "rgba(245,237,214,0.38)", whiteSpace: "nowrap" }}>Emin misin?</span>
+                            <span style={{ fontSize: 11, color: "rgba(245,237,214,0.38)", whiteSpace: "nowrap" }}>{t("trash.confirm")}</span>
                             <button
                                 onClick={handleEmpty}
                                 style={{
@@ -264,7 +266,7 @@ export default function TrashPage() {
                                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(200,80,80,0.38)"; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = "rgba(200,80,80,0.22)"; }}
                             >
-                                Evet, Boşalt
+                                {t("trash.confirmEmpty")}
                             </button>
                             <button
                                 onClick={() => setConfirming(false)}
@@ -276,7 +278,7 @@ export default function TrashPage() {
                                     borderRadius: 99, cursor: "pointer",
                                 }}
                             >
-                                Vazgeç
+                                {t("trash.cancel")}
                             </button>
                         </div>
                     )}
@@ -288,7 +290,7 @@ export default function TrashPage() {
                 <input
                     type="text" value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder="Öğe ara…"
+                    placeholder={t("trash.searchPlaceholder")}
                     style={{
                         padding: "8px 14px", flexShrink: 0,
                         background: "rgba(245,237,214,0.04)",
@@ -309,12 +311,12 @@ export default function TrashPage() {
                     </div>
                 ) : filtered.length === 0 && live.length === 0 ? (
                     <div style={{ textAlign: "center", paddingTop: 60 }}>
-                        <p style={{ fontSize: 18, fontWeight: 700, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.45)", margin: "0 0 8px" }}>Çöp kutusu boş</p>
-                        <p style={{ fontSize: 12, color: "rgba(245,237,214,0.22)", margin: 0 }}>Silinecek bir şey yok</p>
+                        <p style={{ fontSize: 18, fontWeight: 700, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.45)", margin: "0 0 8px" }}>{t("trash.emptyTitle")}</p>
+                        <p style={{ fontSize: 12, color: "rgba(245,237,214,0.22)", margin: 0 }}>{t("trash.emptySubtitle")}</p>
                     </div>
                 ) : filtered.length === 0 ? (
                     <div style={{ textAlign: "center", paddingTop: 60, fontSize: 14, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.3)" }}>
-                        "{search}" ile eşleşen öğe yok
+                        {t("trash.noMatch", { query: search })}
                     </div>
                 ) : (
                     <div style={{ ...card, borderRadius: 14, overflow: "hidden" }}>
@@ -358,7 +360,7 @@ export default function TrashPage() {
                                         onMouseEnter={e => { if (restoring !== item.path) { e.currentTarget.style.background = "rgba(245,237,214,0.1)"; e.currentTarget.style.borderColor = "rgba(245,237,214,0.5)"; }}}
                                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = restoring === item.path ? "rgba(245,237,214,0.06)" : "rgba(245,237,214,0.28)"; }}
                                     >
-                                        {restoring === item.path ? "…" : "Geri Yükle"}
+                                        {restoring === item.path ? "…" : t("trash.restore")}
                                     </button>
                                 )}
 
@@ -377,7 +379,7 @@ export default function TrashPage() {
                                     onMouseEnter={e => { if (deleting !== item.path) { e.currentTarget.style.background = "rgba(200,80,80,0.1)"; e.currentTarget.style.borderColor = "rgba(200,80,80,0.5)"; }}}
                                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = deleting === item.path ? "rgba(245,237,214,0.06)" : "rgba(200,80,80,0.28)"; }}
                                 >
-                                    {deleting === item.path ? "…" : "Sil"}
+                                    {deleting === item.path ? "…" : t("trash.delete")}
                                 </button>
                             </div>
                         ))}

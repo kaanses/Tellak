@@ -230,7 +230,8 @@ target.putBack();"#,
             .unwrap_or(false);
 
         if jxa_ok {
-            return Ok("Orijinal konuma geri yüklendi".to_string());
+            // Machine-readable codes; the frontend localizes the toast.
+            return Ok("original".to_string());
         }
 
         // ── Fallback: mv to Desktop ──────────────────────────────────────────
@@ -245,7 +246,7 @@ target.putBack();"#,
             .unwrap_or(false);
 
         if mv_ok {
-            Ok("Masaüstüne geri yüklendi".to_string())
+            Ok("desktop".to_string())
         } else {
             Err("Could not restore file — try opening Finder and using Put Back manually".to_string())
         }

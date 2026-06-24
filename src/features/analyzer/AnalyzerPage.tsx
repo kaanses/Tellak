@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useToast } from "../../shared/store/toastStore";
+import { useI18n } from "../../shared/i18n";
 
 // ── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -24,9 +25,9 @@ const TYPE_GROUPS: Record<string, string[]> = {
     disk:     ["dmg", "iso", "img", "vmdk", "vhd", "vdi", "sparseimage"],
     document: ["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "pages", "numbers", "keynote"],
 };
-const TYPE_LABELS: Record<string, string> = {
-    all: "Tümü", video: "Video", audio: "Ses",
-    archive: "Arşiv", disk: "Disk Görüntüsü", document: "Belge", other: "Diğer",
+const TYPE_LABEL_KEYS: Record<string, string> = {
+    all: "analyzer.typeAll", video: "analyzer.typeVideo", audio: "analyzer.typeAudio",
+    archive: "analyzer.typeArchive", disk: "analyzer.typeDisk", document: "analyzer.typeDocument", other: "analyzer.typeOther",
 };
 const MIN_SIZES = [50, 100, 250, 500, 1024];
 
@@ -43,16 +44,16 @@ const JUNK_PATTERNS: Record<string, { badge: string; color: string; tip: string 
     ".nuxt":             { badge: "Nuxt",        color: "rgba(245,237,214,0.4)",  tip: "Nuxt derleme önbelleği" },
     "dist":              { badge: "Build",       color: "rgba(255,255,255,0.35)", tip: "Derleme çıktı klasörü" },
     "build":             { badge: "Build",       color: "rgba(255,255,255,0.35)", tip: "Derleme çıktı klasörü" },
-    ".cache":            { badge: "Önbellek",    color: "#F5EDD6",                tip: "Genel uygulama önbelleği" },
-    "Caches":            { badge: "Önbellek",    color: "#F5EDD6",                tip: "Uygulama önbellek verileri" },
-    "Logs":              { badge: "Günlükler",   color: "rgba(255,255,255,0.3)",  tip: "Günlük dosyaları" },
+    ".cache":            { badge: "analyzer.badgeCache",    color: "#F5EDD6",                tip: "Genel uygulama önbelleği" },
+    "Caches":            { badge: "analyzer.badgeCache",    color: "#F5EDD6",                tip: "Uygulama önbellek verileri" },
+    "Logs":              { badge: "analyzer.badgeLogs",   color: "rgba(255,255,255,0.3)",  tip: "Günlük dosyaları" },
     "DiagnosticReports": { badge: "Crash",       color: "rgba(255,255,255,0.3)",  tip: "Uygulama çökme raporları" },
     "vendor":            { badge: "Vendor",      color: "rgba(245,237,214,0.7)",  tip: "Üçüncü taraf bağımlılıkları" },
     ".yarn":             { badge: "Yarn",        color: "rgba(245,237,214,0.5)",  tip: "Yarn paket önbelleği" },
     "pnpm-store":        { badge: "pnpm",        color: "rgba(245,237,214,0.7)",  tip: "pnpm paket deposu" },
     "Simulator":         { badge: "Simulator",   color: "rgba(245,237,214,0.5)",  tip: "iOS Simülatör verileri" },
     "CoreSimulator":     { badge: "Simulator",   color: "rgba(245,237,214,0.5)",  tip: "iOS Simülatör önbelleği" },
-    ".Trash":            { badge: "Çöp",         color: "rgba(200,80,80,0.8)",    tip: "Silinmeyi bekleyen dosyalar" },
+    ".Trash":            { badge: "analyzer.badgeTrash",         color: "rgba(200,80,80,0.8)",    tip: "Silinmeyi bekleyen dosyalar" },
     "target":            { badge: "Rust build",  color: "#f97316",                tip: "Rust/Cargo derleme dosyaları" },
     ".cargo":            { badge: "Cargo",       color: "#f97316",                tip: "Rust kayıt defteri ve derleme önbelleği" },
     "Homebrew":          { badge: "Homebrew",    color: "rgba(245,237,214,0.7)",  tip: "Homebrew paket önbelleği" },
@@ -107,6 +108,7 @@ function Spinner({ size = 12 }: { size?: number }) {
 }
 
 function FileTypeIcon({ ext }: { ext: string }) {
+    const { t } = useI18n();
     const type = getFileType(ext);
     const colors: Record<string, string> = {
         video:    "#F5EDD6",
@@ -120,7 +122,7 @@ function FileTypeIcon({ ext }: { ext: string }) {
     return (
         <div style={{ width: 34, height: 34, borderRadius: 9, background: `${color}18`, border: `1px solid ${color}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <span style={{ fontSize: 8, fontWeight: 800, color, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                {ext ? ext.slice(0, 4) : "DOSYA"}
+                {ext ? ext.slice(0, 4) : t("analyzer.fileExtFallback")}
             </span>
         </div>
     );
@@ -132,6 +134,7 @@ function ConfirmModal({ title, body, confirmLabel, onConfirm, onCancel, danger =
     title: string; body: string; confirmLabel: string;
     onConfirm: () => void; onCancel: () => void; danger?: boolean;
 }) {
+    const { t } = useI18n();
     return createPortal(
         <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ borderRadius: 18, padding: "22px 26px", width: 360, maxWidth: "90vw", background: "#1a0e00", border: `1px solid ${danger ? "rgba(200,80,80,0.3)" : "rgba(245,237,214,0.2)"}`, display: "flex", flexDirection: "column", gap: 14 }}>
@@ -141,7 +144,7 @@ function ConfirmModal({ title, body, confirmLabel, onConfirm, onCancel, danger =
                 </div>
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                     <button onClick={onCancel} style={{ padding: "7px 16px", fontSize: 13, color: "rgba(245,237,214,0.45)", background: "transparent", border: "1px solid rgba(245,237,214,0.16)", borderRadius: 99, cursor: "pointer" }}>
-                        Vazgeç
+                        {t("analyzer.cancel")}
                     </button>
                     <button onClick={onConfirm} style={{ padding: "7px 18px", fontSize: 13, fontWeight: 600, color: danger ? "#F5EDD6" : "#150b00", background: danger ? "rgba(200,80,80,0.25)" : "#F5EDD6", border: `1px solid ${danger ? "rgba(200,80,80,0.5)" : "rgba(245,237,214,0.45)"}`, borderRadius: 99, cursor: "pointer" }}>
                         {confirmLabel}
@@ -193,6 +196,7 @@ function LargeFileRow({ file, home, onTrash }: { file: LargeFileEntry; home: str
 
 function LargeFilesView({ home }: { home: string }) {
     const toast = useToast();
+    const { t } = useI18n();
     const [files,       setFiles]      = useState<LargeFileEntry[]>([]);
     const [scanning,    setScanning]   = useState(false);
     const [minMb,       setMinMb]      = useState(50);
@@ -215,7 +219,7 @@ function LargeFilesView({ home }: { home: string }) {
         try {
             await invoke("trash_duplicate_file", { path: target.path });
             setFiles(prev => prev.filter(f => f.path !== target.path));
-            toast.success(`Çöp kutusuna taşındı: ${target.name}`);
+            toast.success(t("analyzer.movedToTrash", { name: target.name }));
         } catch (e) { toast.error(String(e)); }
     };
 
@@ -235,7 +239,7 @@ function LargeFilesView({ home }: { home: string }) {
 
             {/* Controls bar */}
             <div style={{ ...card, borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 11, color: "rgba(245,237,214,0.25)", flexShrink: 0 }}>Min boyut</span>
+                <span style={{ fontSize: 11, color: "rgba(245,237,214,0.25)", flexShrink: 0 }}>{t("analyzer.minSize")}</span>
                 <div style={{ display: "flex", gap: 4 }}>
                     {MIN_SIZES.map(mb => (
                         <button key={mb} onClick={() => setMinMb(mb)} style={{
@@ -260,7 +264,7 @@ function LargeFilesView({ home }: { home: string }) {
                     onMouseLeave={e => { e.currentTarget.style.background = scanning ? "rgba(245,237,214,0.07)" : "#F5EDD6"; }}
                 >
                     {scanning && <Spinner size={11} />}
-                    {scanning ? "Taranıyor…" : hasScanned ? "Yeniden Tara" : "Şimdi Tara"}
+                    {scanning ? t("analyzer.scanning") : hasScanned ? t("analyzer.rescan") : t("analyzer.scanNow")}
                 </button>
             </div>
 
@@ -269,7 +273,7 @@ function LargeFilesView({ home }: { home: string }) {
                 <div style={{ ...card, borderRadius: 14, padding: "44px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
                     <Spinner size={20} />
                     <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.3)" }}>
-                        {minMb >= 1024 ? `${minMb / 1024} GB` : `${minMb} MB`} üzerindeki dosyalar aranıyor…
+                        {t("analyzer.searchingFilesAbove", { size: minMb >= 1024 ? `${minMb / 1024} GB` : `${minMb} MB` })}
                     </p>
                 </div>
             )}
@@ -277,9 +281,9 @@ function LargeFilesView({ home }: { home: string }) {
             {/* Empty state */}
             {!hasScanned && !scanning && (
                 <div style={{ ...card, borderRadius: 14, padding: "52px 16px", textAlign: "center" }}>
-                    <p style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700, color: "rgba(245,237,214,0.45)", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif" }}>Yer kaplayan dosyaları bul</p>
+                    <p style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700, color: "rgba(245,237,214,0.45)", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif" }}>{t("analyzer.largeEmptyTitle")}</p>
                     <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.2)" }}>
-                        Ana klasörünüzde {minMb >= 1024 ? `${minMb / 1024} GB` : `${minMb} MB`} üzerindeki dosyaları tarar
+                        {t("analyzer.largeEmptyBody", { size: minMb >= 1024 ? `${minMb / 1024} GB` : `${minMb} MB` })}
                     </p>
                 </div>
             )}
@@ -289,33 +293,33 @@ function LargeFilesView({ home }: { home: string }) {
                 <>
                     {/* Type filters + summary */}
                     <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
-                        {typeOptions.map(t => {
-                            const count = t === "all" ? files.length : files.filter(f => getFileType(f.ext) === t).length;
+                        {typeOptions.map(ty => {
+                            const count = ty === "all" ? files.length : files.filter(f => getFileType(f.ext) === ty).length;
                             return (
-                                <button key={t} onClick={() => setTypeFilter(t)} style={{
+                                <button key={ty} onClick={() => setTypeFilter(ty)} style={{
                                     padding: "3px 10px", fontSize: 11, fontWeight: 600, borderRadius: 99, cursor: "pointer", transition: "all 0.15s",
-                                    color: typeFilter === t ? "#F5EDD6" : "rgba(245,237,214,0.32)",
-                                    background: typeFilter === t ? "rgba(245,237,214,0.14)" : "transparent",
-                                    border: `1px solid ${typeFilter === t ? "rgba(245,237,214,0.32)" : "rgba(245,237,214,0.1)"}`,
+                                    color: typeFilter === ty ? "#F5EDD6" : "rgba(245,237,214,0.32)",
+                                    background: typeFilter === ty ? "rgba(245,237,214,0.14)" : "transparent",
+                                    border: `1px solid ${typeFilter === ty ? "rgba(245,237,214,0.32)" : "rgba(245,237,214,0.1)"}`,
                                 }}>
-                                    {TYPE_LABELS[t] ?? t} · {count}
+                                    {TYPE_LABEL_KEYS[ty] ? t(TYPE_LABEL_KEYS[ty]) : ty} · {count}
                                 </button>
                             );
                         })}
                         <span style={{ marginLeft: "auto", fontSize: 11, color: "rgba(245,237,214,0.22)", fontFamily: "monospace" }}>
-                            {filtered.length} dosya · {humanize(totalFiltered)}
+                            {t("analyzer.fileCount", { count: filtered.length })} · {humanize(totalFiltered)}
                         </span>
                     </div>
 
                     {files.length === 0 ? (
                         <div style={{ ...card, borderRadius: 14, padding: "32px 16px", textAlign: "center" }}>
                             <p style={{ margin: 0, fontSize: 13, color: "rgba(245,237,214,0.3)" }}>
-                                {minMb >= 1024 ? `${minMb / 1024} GB` : `${minMb} MB`} üzerinde dosya bulunamadı.
+                                {t("analyzer.noFilesAbove", { size: minMb >= 1024 ? `${minMb / 1024} GB` : `${minMb} MB` })}
                             </p>
                         </div>
                     ) : filtered.length === 0 ? (
                         <div style={{ ...card, borderRadius: 14, padding: "24px 16px", textAlign: "center" }}>
-                            <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.3)" }}>Sonuçlarda {TYPE_LABELS[typeFilter]} dosyası yok.</p>
+                            <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.3)" }}>{t("analyzer.noTypeInResults", { type: TYPE_LABEL_KEYS[typeFilter] ? t(TYPE_LABEL_KEYS[typeFilter]) : typeFilter })}</p>
                         </div>
                     ) : (
                         <div style={{ ...card, borderRadius: 14, overflow: "hidden" }}>
@@ -329,9 +333,9 @@ function LargeFilesView({ home }: { home: string }) {
 
             {trashTarget && (
                 <ConfirmModal
-                    title="Çöp kutusuna taşınsın mı?"
+                    title={t("analyzer.moveToTrashTitle")}
                     body={`${trashTarget.name} · ${trashTarget.size_human}`}
-                    confirmLabel="Çöp Kutusuna Taşı"
+                    confirmLabel={t("analyzer.moveToTrash")}
                     onConfirm={doTrash}
                     onCancel={() => setTrashTarget(null)}
                 />
@@ -348,6 +352,7 @@ const TREE_MIN_SIZES = [10, 50, 100, 500, 1024];
 function TreeEntryRow({ entry, pct, relPath, onDelete }: {
     entry: TreeEntry; pct: number; relPath: string; onDelete: () => void;
 }) {
+    const { t } = useI18n();
     const [hovered, setHovered] = useState(false);
     const junk = getJunkInfo(entry.name);
     const parts = relPath.split("/");
@@ -365,7 +370,7 @@ function TreeEntryRow({ entry, pct, relPath, onDelete }: {
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                     <span style={{ fontSize: 10, color: "rgba(245,237,214,0.28)", flexShrink: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>{parentPath}</span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(245,237,214,0.82)", whiteSpace: "nowrap", flexShrink: 0 }}>{lastName}</span>
-                    {junk && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", flexShrink: 0, color: junk.color, background: `${junk.color}18`, border: `1px solid ${junk.color}40`, padding: "1px 5px", borderRadius: 4 }}>{junk.badge}</span>}
+                    {junk && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.06em", flexShrink: 0, color: junk.color, background: `${junk.color}18`, border: `1px solid ${junk.color}40`, padding: "1px 5px", borderRadius: 4 }}>{junk.badge.startsWith("analyzer.") ? t(junk.badge) : junk.badge}</span>}
                     <span style={{ marginLeft: "auto", fontSize: 11, fontFamily: "monospace", flexShrink: 0, color: "rgba(245,237,214,0.85)" }}>{entry.size_human}</span>
                 </div>
                 <div style={{ width: "100%", background: "rgba(245,237,214,0.08)", borderRadius: 99, height: 3 }}>
@@ -388,6 +393,7 @@ function TreeEntryRow({ entry, pct, relPath, onDelete }: {
 
 function FolderTreeView({ home }: { home: string }) {
     const toast = useToast();
+    const { t } = useI18n();
     const [entries,      setEntries]      = useState<TreeEntry[]>([]);
     const [scanning,     setScanning]     = useState(false);
     const [scanRoot,     setScanRoot]     = useState<string | null>(null);
@@ -443,21 +449,21 @@ function FolderTreeView({ home }: { home: string }) {
         try {
             await invoke("clean_junk_paths", { paths: [target.path] });
             setEntries(prev => prev.filter(e => !e.path.startsWith(target.path)));
-            toast.success(`Silindi: ${target.name}`);
+            toast.success(t("analyzer.deleted", { name: target.name }));
         } catch (e) { toast.error(String(e)); }
-    }, [deleteTarget, toast]);
+    }, [deleteTarget, toast, t]);
 
     const minBytes = minMb * 1024 * 1024;
     const filtered = entries.filter(e => e.size >= minBytes);
     const maxSize  = filtered[0]?.size ?? 1;
 
     const PRESETS = home ? [
-        { label: "Ana (~)",       path: home },
-        { label: "İndirilenler",  path: `${home}/Downloads` },
-        { label: "Belgeler",      path: `${home}/Documents` },
-        { label: "Geliştirici",   path: `${home}/Developer` },
-        { label: "Kütüphane",     path: `${home}/Library` },
-        { label: "Uygulamalar",   path: "/Applications" },
+        { label: t("analyzer.presetHome"),         path: home },
+        { label: t("analyzer.presetDownloads"),    path: `${home}/Downloads` },
+        { label: t("analyzer.presetDocuments"),    path: `${home}/Documents` },
+        { label: t("analyzer.presetDeveloper"),    path: `${home}/Developer` },
+        { label: t("analyzer.presetLibrary"),      path: `${home}/Library` },
+        { label: t("analyzer.presetApplications"), path: "/Applications" },
     ] : [];
 
     const shortRelPath = (path: string) => {
@@ -485,13 +491,13 @@ function FolderTreeView({ home }: { home: string }) {
                 <div style={{ flex: 1 }} />
                 {scanning && (
                     <span style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "rgba(245,237,214,0.32)" }}>
-                        <Spinner size={12} /> {entries.length} klasör bulundu…
+                        <Spinner size={12} /> {t("analyzer.foldersFound", { count: entries.length })}
                     </span>
                 )}
                 {done && !scanning && (
                     <button onClick={() => scanRoot && startScan(scanRoot)}
                         style={{ padding: "4px 12px", fontSize: 11, fontWeight: 500, color: "rgba(245,237,214,0.4)", background: "rgba(245,237,214,0.04)", border: "1px solid rgba(245,237,214,0.12)", borderRadius: 99, cursor: "pointer" }}>
-                        Yeniden Tara
+                        {t("analyzer.rescan")}
                     </button>
                 )}
             </div>
@@ -499,7 +505,7 @@ function FolderTreeView({ home }: { home: string }) {
             {/* Min-size filter */}
             {(scanning || done) && (
                 <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: "rgba(245,237,214,0.25)", marginRight: 2 }}>Min boyut</span>
+                    <span style={{ fontSize: 11, color: "rgba(245,237,214,0.25)", marginRight: 2 }}>{t("analyzer.minSize")}</span>
                     {TREE_MIN_SIZES.map(mb => (
                         <button key={mb} onClick={() => setMinMb(mb)}
                             style={{
@@ -513,7 +519,7 @@ function FolderTreeView({ home }: { home: string }) {
                     ))}
                     {done && (
                         <span style={{ marginLeft: "auto", fontSize: 11, color: "rgba(245,237,214,0.22)", fontFamily: "monospace" }}>
-                            {filtered.length} klasör{timedOut ? " (tarama yarıda kesildi)" : ""}
+                            {t("analyzer.folderCount", { count: filtered.length })}{timedOut ? t("analyzer.scanTruncated") : ""}
                         </span>
                     )}
                 </div>
@@ -522,9 +528,9 @@ function FolderTreeView({ home }: { home: string }) {
             {/* Empty state */}
             {!scanning && !done && (
                 <div style={{ ...card, borderRadius: 14, padding: "52px 16px", textAlign: "center" }}>
-                    <p style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700, color: "rgba(245,237,214,0.45)", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif" }}>Taranacak klasörü seçin</p>
+                    <p style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 700, color: "rgba(245,237,214,0.45)", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif" }}>{t("analyzer.treeEmptyTitle")}</p>
                     <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.2)" }}>
-                        Tüm alt klasörleri boyuta göre sıralar — tam olarak neyin yer kapladığını bulun
+                        {t("analyzer.treeEmptyBody")}
                     </p>
                 </div>
             )}
@@ -533,7 +539,7 @@ function FolderTreeView({ home }: { home: string }) {
             {scanning && entries.length === 0 && (
                 <div style={{ ...card, borderRadius: 14, padding: "44px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
                     <Spinner size={20} />
-                    <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.3)" }}>Klasörler taranıyor…</p>
+                    <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.3)" }}>{t("analyzer.scanningFolders")}</p>
                 </div>
             )}
 
@@ -551,7 +557,7 @@ function FolderTreeView({ home }: { home: string }) {
                     ))}
                     {filtered.length > 300 && (
                         <p style={{ padding: "12px 16px", margin: 0, fontSize: 11, color: "rgba(245,237,214,0.25)", textAlign: "center" }}>
-                            {filtered.length} klasörden ilk 300 gösteriliyor — sonuçları daraltmak için min boyutu artırın
+                            {t("analyzer.showingFirst300", { count: filtered.length })}
                         </p>
                     )}
                 </div>
@@ -559,9 +565,9 @@ function FolderTreeView({ home }: { home: string }) {
 
             {deleteTarget && (
                 <ConfirmModal
-                    title={`"${deleteTarget.name}" silinsin mi?`}
-                    body={`${deleteTarget.size_human} kalıcı olarak silinecek. Bu işlem geri alınamaz.`}
-                    confirmLabel="Sil"
+                    title={t("analyzer.deleteTitle", { name: deleteTarget.name })}
+                    body={t("analyzer.deleteBody", { size: deleteTarget.size_human })}
+                    confirmLabel={t("analyzer.delete")}
                     danger
                     onConfirm={doDelete}
                     onCancel={() => setDeleteTarget(null)}
@@ -574,6 +580,7 @@ function FolderTreeView({ home }: { home: string }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AnalyzerPage() {
+    const { t } = useI18n();
     const [mode, setMode] = useState<"large" | "tree">("large");
     const [home, setHome] = useState("");
 
@@ -586,7 +593,7 @@ export default function AnalyzerPage() {
 
             {/* Page title */}
             <div>
-                <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#F5EDD6", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", letterSpacing: "-0.02em" }}>Disk</h1>
+                <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#F5EDD6", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", letterSpacing: "-0.02em" }}>{t("analyzer.pageTitle")}</h1>
             </div>
 
             {/* ── Mode toggle ───────────────────────────────────────────────── */}
@@ -597,7 +604,7 @@ export default function AnalyzerPage() {
                         color: mode === m ? "#F5EDD6" : "rgba(245,237,214,0.32)",
                         background: mode === m ? "rgba(245,237,214,0.16)" : "transparent",
                     }}>
-                        {m === "large" ? "Büyük Dosyalar" : "Klasör Ağacı"}
+                        {m === "large" ? t("analyzer.modeLargeFiles") : t("analyzer.modeFolderTree")}
                     </button>
                 ))}
             </div>

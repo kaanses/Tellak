@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../shared/store/toastStore";
+import { useI18n } from "../../shared/i18n";
 
 interface RamStats {
     total: number;
@@ -76,6 +77,7 @@ function useAnimatedNumber(target: number, duration = 1200): number {
 function RamRing({ percent, loading, optimizing, optimized }: {
     percent: number; loading: boolean; optimizing: boolean; optimized: boolean;
 }) {
+    const { t } = useI18n();
     const sz = 200, R = 82, C = 2 * Math.PI * R, cx = sz / 2;
     const animated = useAnimatedNumber(percent);
     const fill     = loading ? 0 : (animated / 100) * C;
@@ -140,7 +142,7 @@ function RamRing({ percent, loading, optimizing, optimized }: {
                     ? <div className="shimmer" style={{ width: 60, height: 44 }} />
                     : optimizing
                     ? <span style={{ fontSize: 12, color: "rgba(245,237,214,0.5)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                        optimize ediliyor
+                        {t("ram.ringOptimizing")}
                       </span>
                     : optimized
                     ? <svg width={48} height={48} viewBox="0 0 48 48" fill="none">
@@ -159,7 +161,7 @@ function RamRing({ percent, loading, optimizing, optimized }: {
                             {animated.toFixed(0)}
                         </span>
                         <span style={{ fontSize: 11, color: "rgba(245,237,214,0.22)", textTransform: "uppercase", letterSpacing: "0.12em" }}>
-                            % kullanım
+                            {t("ram.ringUsageLabel")}
                         </span>
                     </>
                 }
@@ -174,6 +176,7 @@ export default function RamPage() {
     const [statsKey,   setStatsKey]   = useState(0);
     const toast = useToast();
     const navigate = useNavigate();
+    const { t } = useI18n();
     const [optimizing, setOptimizing] = useState(false);
     const [optimized,  setOptimized]  = useState(false);
     const [freed,      setFreed]      = useState<string | null>(null);
@@ -205,9 +208,9 @@ export default function RamPage() {
     };
 
     const STAT_COLS = [
-        { label: "Toplam",    value: stats?.total_human,     color: "rgba(245,237,214,0.75)" },
-        { label: "Kullanılan", value: stats?.used_human,     color: "#F5EDD6" },
-        { label: "Boş",       value: stats?.available_human, color: "rgba(245,237,214,0.55)" },
+        { label: t("ram.statTotal"),     value: stats?.total_human,     color: "rgba(245,237,214,0.75)" },
+        { label: t("ram.statUsed"),      value: stats?.used_human,      color: "#F5EDD6" },
+        { label: t("ram.statFree"),      value: stats?.available_human, color: "rgba(245,237,214,0.55)" },
     ];
 
     return (
@@ -266,7 +269,7 @@ export default function RamPage() {
                             borderRadius: 99, padding: "8px 24px",
                         }}>
                             <span style={{ fontSize: 14, fontWeight: 700, color: "#F5EDD6" }}>
-                                {freed ? `${freed} kurtarıldı — Bellek optimize edildi` : "Bellek başarıyla optimize edildi"}
+                                {freed ? t("ram.badgeFreed", { freed }) : t("ram.badgeDone")}
                             </span>
                         </div>
                         <button
@@ -281,7 +284,7 @@ export default function RamPage() {
                             onMouseEnter={e => { e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                             onMouseLeave={e => { e.currentTarget.style.background = "#F5EDD6"; }}
                         >
-                            Ana Sayfaya Git
+                            {t("ram.goHome")}
                         </button>
                     </div>
                 )}
@@ -302,14 +305,14 @@ export default function RamPage() {
                         onMouseEnter={e => { if (!optimizing && !loading) e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = optimizing ? "rgba(245,237,214,0.07)" : "#F5EDD6"; }}
                     >
-                        {optimizing ? "Optimize Ediliyor…" : "RAM'i Temizle"}
+                        {optimizing ? t("ram.optimizing") : t("ram.optimizeBtn")}
                     </button>
                 )}
 
                 {/* Footer note + refresh */}
                 <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <p style={{ margin: 0, fontSize: 11, color: "rgba(245,237,214,0.18)", textAlign: "center", lineHeight: 1.6 }}>
-                        macOS memory purge çalıştırır — yönetici şifresi gerektirir.
+                        {t("ram.footerNote")}
                     </p>
                     <button
                         onClick={() => load(true)}
@@ -325,7 +328,7 @@ export default function RamPage() {
                         onMouseEnter={e => { if (!loading && !optimizing) { e.currentTarget.style.color = "rgba(245,237,214,0.55)"; e.currentTarget.style.borderColor = "rgba(245,237,214,0.25)"; }}}
                         onMouseLeave={e => { e.currentTarget.style.color = "rgba(245,237,214,0.3)"; e.currentTarget.style.borderColor = "rgba(245,237,214,0.1)"; }}
                     >
-                        Yenile
+                        {t("ram.refresh")}
                     </button>
                 </div>
 

@@ -37,9 +37,9 @@ describe("Dashboard scan-state persistence", () => {
         });
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
-        expect(screen.getByText("Tarama Tamamlandı")).toBeInTheDocument();
+        expect(screen.getByText("Scan Complete")).toBeInTheDocument();
         expect(screen.getByText("8.0 GB")).toBeInTheDocument();        // junk total card
-        expect(screen.getByRole("button", { name: /Yeniden Tara/ })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Rescan/ })).toBeInTheDocument();
     });
 
     it("shows the scan hero when the store scan state is idle", () => {
@@ -48,6 +48,6 @@ describe("Dashboard scan-state persistence", () => {
         });
         render(<MemoryRouter><Dashboard /></MemoryRouter>);
 
-        expect(screen.queryByText("Tarama Tamamlandı")).not.toBeInTheDocument();
+        expect(screen.queryByText("Scan Complete")).not.toBeInTheDocument();
     });
 });

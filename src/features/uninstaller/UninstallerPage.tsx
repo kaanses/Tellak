@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { useToast } from "../../shared/store/toastStore";
+import { useI18n } from "../../shared/i18n";
 
 interface AppInfo {
     name: string; path: string; bundle_id: string;
@@ -83,12 +84,13 @@ function SortBtn({ label, state, onClick }: { label: string; state: SortState; o
 function UninstallBtn({ app, onUninstall, uninstalling }: {
     app: AppInfo; onUninstall: (app: AppInfo) => void; uninstalling: boolean;
 }) {
+    const { t } = useI18n();
     const [confirming, setConfirming] = useState(false);
 
     if (confirming) {
         return (
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                <span style={{ fontSize: 11, color: "rgba(245,237,214,0.38)" }}>Emin misin?</span>
+                <span style={{ fontSize: 11, color: "rgba(245,237,214,0.38)" }}>{t("uninstaller.sure")}</span>
                 <button
                     onClick={() => { setConfirming(false); onUninstall(app); }}
                     style={{
@@ -100,7 +102,7 @@ function UninstallBtn({ app, onUninstall, uninstalling }: {
                     onMouseEnter={e => { e.currentTarget.style.background = "rgba(200,80,80,0.38)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "rgba(200,80,80,0.22)"; }}
                 >
-                    Çöp Kutusuna Taşı
+                    {t("uninstaller.moveToTrash")}
                 </button>
                 <button
                     onClick={() => setConfirming(false)}
@@ -112,7 +114,7 @@ function UninstallBtn({ app, onUninstall, uninstalling }: {
                         borderRadius: 99, cursor: "pointer", transition: "all 0.15s",
                     }}
                 >
-                    Vazgeç
+                    {t("uninstaller.cancel")}
                 </button>
             </div>
         );
@@ -134,13 +136,14 @@ function UninstallBtn({ app, onUninstall, uninstalling }: {
             onMouseEnter={e => { if (!uninstalling) { e.currentTarget.style.background = "rgba(200,80,80,0.1)"; e.currentTarget.style.borderColor = "rgba(200,80,80,0.5)"; } }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = uninstalling ? "rgba(245,237,214,0.06)" : "rgba(200,80,80,0.28)"; }}
         >
-            {uninstalling ? "Kaldırılıyor…" : "Kaldır"}
+            {uninstalling ? t("uninstaller.uninstalling") : t("uninstaller.uninstall")}
         </button>
     );
 }
 
 export default function UninstallerPage() {
     const toast = useToast();
+    const { t } = useI18n();
     const [apps,         setApps]         = useState<AppInfo[]>([]);
     const [loading,      setLoading]      = useState(false);
     const [search,       setSearch]       = useState("");
@@ -160,8 +163,8 @@ export default function UninstallerPage() {
     const handleUninstall = async (app: AppInfo) => {
         setUninstalling(app.path);
         try {
-            const result = await invoke<string>("uninstall_app", { appPath: app.path });
-            toast.success(result);
+            await invoke<string>("uninstall_app", { appPath: app.path });
+            toast.success(t("uninstaller.movedToTrash", { app: app.name }));
             setApps(prev => prev.filter(a => a.path !== app.path));
         } catch (e) { toast.error(String(e)); }
         setUninstalling(null);
@@ -206,7 +209,7 @@ export default function UninstallerPage() {
 
             {/* Page title */}
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#F5EDD6", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", letterSpacing: "-0.02em" }}>
-                Uygulamalar
+                {t("uninstaller.title")}
             </h1>
 
             {/* Toolbar */}
@@ -215,7 +218,7 @@ export default function UninstallerPage() {
                     <input
                         type="text" value={search}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Uygulama ara…"
+                        placeholder={t("uninstaller.searchPlaceholder")}
                         style={{
                             width: 220, flexShrink: 0,
                             padding: "8px 14px",
@@ -229,8 +232,8 @@ export default function UninstallerPage() {
                     />
                 )}
 
-                <SortBtn label="Boyut" state={sizeSort} onClick={() => { setSizeSort(nextSort(sizeSort)); setUsedSort(0); }} />
-                <SortBtn label="Son Kullanım" state={usedSort} onClick={() => { setUsedSort(nextSort(usedSort)); setSizeSort(0); }} />
+                <SortBtn label={t("uninstaller.sortSize")} state={sizeSort} onClick={() => { setSizeSort(nextSort(sizeSort)); setUsedSort(0); }} />
+                <SortBtn label={t("uninstaller.sortLastUsed")} state={usedSort} onClick={() => { setUsedSort(nextSort(usedSort)); setSizeSort(0); }} />
 
                 <div style={{ flex: 1 }} />
 
@@ -248,7 +251,7 @@ export default function UninstallerPage() {
                     onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "rgba(245,237,214,0.1)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "rgba(245,237,214,0.05)"; }}
                 >
-                    {loading ? "Yükleniyor…" : "Yenile"}
+                    {loading ? t("uninstaller.loading") : t("uninstaller.refresh")}
                 </button>
             </div>
 
@@ -290,14 +293,14 @@ export default function UninstallerPage() {
                                                     : { color: "rgba(245,237,214,0.45)", background: "rgba(245,237,214,0.06)", border: "1px solid rgba(245,237,214,0.15)" }
                                                 ),
                                             }}>
-                                                {isLarger ? "ASIL" : "YEDEK"}
+                                                {isLarger ? t("uninstaller.badgePrimary") : t("uninstaller.badgeDuplicate")}
                                             </span>
                                         )}
                                     </div>
                                     <div style={{ display: "flex", gap: 10, marginTop: 2 }}>
                                         <span style={{ fontSize: 11, color: "rgba(245,237,214,0.32)" }}>{app.size}</span>
                                         {app.last_used && app.last_used !== "Unknown" && (
-                                            <span style={{ fontSize: 11, color: "rgba(245,237,214,0.22)" }}>Son kullanım: {app.last_used}</span>
+                                            <span style={{ fontSize: 11, color: "rgba(245,237,214,0.22)" }}>{t("uninstaller.lastUsed", { date: app.last_used })}</span>
                                         )}
                                     </div>
                                     <div style={{
@@ -320,13 +323,13 @@ export default function UninstallerPage() {
 
             {!loading && apps.length > 0 && filtered.length === 0 && (
                 <div style={{ textAlign: "center", padding: "48px 0", fontSize: 14, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.3)" }}>
-                    "{search}" ile eşleşen uygulama yok
+                    {t("uninstaller.noMatch", { query: search })}
                 </div>
             )}
 
             {!loading && apps.length > 0 && (
                 <div style={{ fontSize: 10, color: "rgba(245,237,214,0.18)", textAlign: "right" }}>
-                    {apps.length} uygulamadan {filtered.length} tanesi
+                    {t("uninstaller.countSummary", { shown: filtered.length, total: apps.length })}
                 </div>
             )}
         </div>

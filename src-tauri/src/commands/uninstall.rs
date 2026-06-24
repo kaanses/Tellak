@@ -317,7 +317,7 @@ pub async fn uninstall_app(app_path: String) -> Result<String, String> {
 
         if std::fs::rename(&path, &trash_dest).is_ok() {
             remove_from_cache(&app_path);
-            return Ok(format!("{} Çöp Kutusu'na taşındı", app_name));
+            return Ok(format!("{} moved to Trash", app_name));
         }
 
         // Fallback: osascript with admin (system apps in /Applications)
@@ -331,13 +331,13 @@ pub async fn uninstall_app(app_path: String) -> Result<String, String> {
             .args(["-e", &osa_script])
             .stdin(Stdio::null())
             .status()
-            .map_err(|e| format!("osascript çalıştırılamadı: {}", e))?;
+            .map_err(|e| format!("Could not run osascript: {}", e))?;
 
         if status.success() {
             remove_from_cache(&app_path);
-            Ok(format!("{} Çöp Kutusu'na taşındı", app_name))
+            Ok(format!("{} moved to Trash", app_name))
         } else {
-            Err(format!("{} Çöp Kutusu'na taşınamadı — yönetici izni iptal edildi ya da reddedildi.", app_name))
+            Err(format!("{} could not be moved to Trash — administrator permission was cancelled or denied.", app_name))
         }
     })
     .await

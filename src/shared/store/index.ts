@@ -16,6 +16,22 @@ interface SystemStatus {
 
 export type ScanState = "idle" | "scanning" | "done";
 
+// ── Language ────────────────────────────────────────────────────────────────
+export type Lang = "en" | "tr";
+
+const LANG_KEY = "tellak.lang";
+
+// Fresh-launch default: honour an explicit user override (localStorage), else
+// auto-detect from the system locale — Turkish system → tr, everything else → en.
+function detectLang(): Lang {
+    try {
+        const saved = localStorage.getItem(LANG_KEY);
+        if (saved === "en" || saved === "tr") return saved;
+    } catch { /* localStorage unavailable */ }
+    const sys = (navigator.language || "").toLowerCase();
+    return sys.startsWith("tr") ? "tr" : "en";
+}
+
 // Junk-scan results live in the store (not Dashboard-local state) so they
 // survive navigating away to an action page (/clean, /ram, …) and back —
 // otherwise the Dashboard remounts at "idle" and dumps the user on the hero
@@ -32,6 +48,8 @@ interface AppState {
     fetchSystemStatus: (force?: boolean) => Promise<void>;
     junkScan: JunkScan;
     setJunkScan: (update: Partial<JunkScan> | ((prev: JunkScan) => Partial<JunkScan>)) => void;
+    lang: Lang;
+    setLang: (lang: Lang) => void;
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -45,6 +63,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     },
 
     junkScan: { state: "idle", count: 0, total: 0, human: "" },
+
+    lang: detectLang(),
+    setLang: (lang) => {
+        try { localStorage.setItem(LANG_KEY, lang); } catch { /* ignore */ }
+        set({ lang });
+    },
 
     setJunkScan: (update) =>
         set((s) => ({

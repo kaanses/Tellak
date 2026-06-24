@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../../shared/store";
+import { useI18n } from "../../shared/i18n";
 import tellakImg from "../../assets/tellak.png";
 import tellakIcon from "../../assets/tellak-icon.png";
 
@@ -158,6 +159,7 @@ function ResultCard({ icon, category, metric, sub, cta, accentColor, gradientFro
 
 export default function Dashboard() {
     const { fetchSystemStatus, systemStatus, junkScan, setJunkScan } = useAppStore();
+    const { t } = useI18n();
     const navigate = useNavigate();
     const unlistenRef  = useRef<(() => void)[]>([]);
     const scanningRef  = useRef(false);
@@ -251,7 +253,7 @@ export default function Dashboard() {
                         </defs>
                         <text fontSize="8" fontWeight="600" letterSpacing="3.5" fill="rgba(245,237,214,0.75)"
                             fontFamily="-apple-system, BlinkMacSystemFont, sans-serif" textAnchor="middle">
-                            <textPath href="#taraArc" startOffset="50%">TARA</textPath>
+                            <textPath href="#taraArc" startOffset="50%">{t("dashboard.scanCta")}</textPath>
                         </text>
                     </svg>
                     {/* Circle button */}
@@ -352,7 +354,7 @@ export default function Dashboard() {
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
                 <div>
                     <h2 style={{ margin: "0 0 10px", fontSize: 24, fontWeight: 800, color: "#F5EDD6", letterSpacing: "-0.03em" }}>
-                        Tarama Tamamlandı
+                        {t("dashboard.scanComplete")}
                     </h2>
                     <div style={{ display: "flex", alignItems: "center" }}>
                         {systemStatus.loading ? (
@@ -362,7 +364,7 @@ export default function Dashboard() {
                                 { label: "CPU",  value: `${((data?.CPU?.Usage as number) ?? 0).toFixed(0)}%`,  color: statColor((data?.CPU?.Usage as number) ?? 0) },
                                 { label: "RAM",  value: `${ramPct.toFixed(0)}%`, color: statColor(ramPct) },
                                 { label: "Disk", value: `${diskPct.toFixed(0)}%`, color: statColor(diskPct) },
-                                { label: "Boş",  value: `${diskFree.toFixed(1)} GB`, color: "rgba(245,237,214,0.45)" },
+                                { label: t("dashboard.statFree"),  value: `${diskFree.toFixed(1)} GB`, color: "rgba(245,237,214,0.45)" },
                             ].map((s, i) => (
                                 <span key={s.label} style={{ display: "flex", alignItems: "center" }}>
                                     {i > 0 && <span style={{ color: "rgba(245,237,214,0.12)", margin: "0 10px", fontSize: 12 }}>|</span>}
@@ -388,17 +390,17 @@ export default function Dashboard() {
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/>
                     </svg>
-                    Yeniden Tara
+                    {t("dashboard.rescan")}
                 </button>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-                <ResultCard icon={<Sparkles size={28} strokeWidth={1.5} />} category="Temizleyici" metric={junkHuman || humanizeBytes(junkTotal)} sub={finalizing ? "hesaplanıyor…" : "kaldırılabilir çöp dosyası"} cta="Temizle"    accentColor="rgba(245,237,214,0.75)" gradientFrom="#130d06" gradientTo="#1c1309" loading={finalizing} onClick={() => navigate("/clean", { state: { autoScan: true } })} />
-                <ResultCard icon={<Monitor size={28} strokeWidth={1.5} />} category="RAM" metric={`${ramPct.toFixed(0)}%`} sub="bellek kullanımda" cta="Optimize Et" accentColor="rgba(245,237,214,0.7)" gradientFrom="#130d06" gradientTo="#1c1309" onClick={() => navigate("/ram")} />
-                <ResultCard icon={<Database size={28} strokeWidth={1.5} />} category="Disk" metric={`${diskPct.toFixed(0)}%`} sub={`${diskFree.toFixed(1)} GB boş alan`} cta="İncele" accentColor="rgba(245,237,214,0.5)" gradientFrom="#100c05" gradientTo="#181107" onClick={() => navigate("/analyze")} />
-                <ResultCard icon={<Trash2 size={28} strokeWidth={1.5} />} category="Çöp Kutusu" metric="Çöp" sub="içinde ne olduğunu göster" cta="Göster" accentColor="rgba(245,237,214,0.6)" gradientFrom="#100c05" gradientTo="#181107" onClick={() => navigate("/trash")} />
-                <ResultCard icon={<Lock size={28} strokeWidth={1.5} />} category="Gizlilik" metric="İzler" sub="tarayıcı geçmişi ve çerezler" cta="Temizle" accentColor="rgba(245,237,214,0.6)" gradientFrom="#100c05" gradientTo="#181107" onClick={() => navigate("/privacy")} />
-                <ResultCard icon={<Copy size={28} strokeWidth={1.5} />} category="Yinelemeler" metric="Tara" sub="yinelenen dosyaları bul" cta="Başlat" accentColor="rgba(245,237,214,0.4)" gradientFrom="#0e0b04" gradientTo="#161006" onClick={() => navigate("/duplicates")} />
+                <ResultCard icon={<Sparkles size={28} strokeWidth={1.5} />} category={t("dashboard.cardCleanerLabel")} metric={junkHuman || humanizeBytes(junkTotal)} sub={finalizing ? t("dashboard.cardCleanerCalculating") : t("dashboard.cardCleanerSub")} cta={t("dashboard.cardCleanerCta")}    accentColor="rgba(245,237,214,0.75)" gradientFrom="#130d06" gradientTo="#1c1309" loading={finalizing} onClick={() => navigate("/clean", { state: { autoScan: true } })} />
+                <ResultCard icon={<Monitor size={28} strokeWidth={1.5} />} category={t("dashboard.cardRamLabel")} metric={`${ramPct.toFixed(0)}%`} sub={t("dashboard.cardRamSub")} cta={t("dashboard.cardRamCta")} accentColor="rgba(245,237,214,0.7)" gradientFrom="#130d06" gradientTo="#1c1309" onClick={() => navigate("/ram")} />
+                <ResultCard icon={<Database size={28} strokeWidth={1.5} />} category={t("dashboard.cardDiskLabel")} metric={`${diskPct.toFixed(0)}%`} sub={t("dashboard.cardDiskSub", { gb: diskFree.toFixed(1) })} cta={t("dashboard.cardDiskCta")} accentColor="rgba(245,237,214,0.5)" gradientFrom="#100c05" gradientTo="#181107" onClick={() => navigate("/analyze")} />
+                <ResultCard icon={<Trash2 size={28} strokeWidth={1.5} />} category={t("dashboard.cardTrashLabel")} metric={t("dashboard.cardTrashMetric")} sub={t("dashboard.cardTrashSub")} cta={t("dashboard.cardTrashCta")} accentColor="rgba(245,237,214,0.6)" gradientFrom="#100c05" gradientTo="#181107" onClick={() => navigate("/trash")} />
+                <ResultCard icon={<Lock size={28} strokeWidth={1.5} />} category={t("dashboard.cardPrivacyLabel")} metric={t("dashboard.cardPrivacyMetric")} sub={t("dashboard.cardPrivacySub")} cta={t("dashboard.cardPrivacyCta")} accentColor="rgba(245,237,214,0.6)" gradientFrom="#100c05" gradientTo="#181107" onClick={() => navigate("/privacy")} />
+                <ResultCard icon={<Copy size={28} strokeWidth={1.5} />} category={t("dashboard.cardDuplicatesLabel")} metric={t("dashboard.cardDuplicatesMetric")} sub={t("dashboard.cardDuplicatesSub")} cta={t("dashboard.cardDuplicatesCta")} accentColor="rgba(245,237,214,0.4)" gradientFrom="#0e0b04" gradientTo="#161006" onClick={() => navigate("/duplicates")} />
             </div>
         </div>
     );

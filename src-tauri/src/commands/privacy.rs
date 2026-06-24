@@ -256,7 +256,7 @@ pub async fn clean_privacy_all(paths: Vec<String>, flush_dns: bool) -> Result<St
             }
         }
 
-        Ok(format!("{} öğe kaldırıldı", removed))
+        Ok(format!("{} items removed", removed))
     })
     .await
     .map_err(|e| e.to_string())?

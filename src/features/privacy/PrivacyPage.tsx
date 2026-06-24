@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "../../shared/store/toastStore";
+import { useI18n } from "../../shared/i18n";
 
 interface PrivacyItem     { name: string; path: string; size: number; size_human: string }
 interface PrivacyCategory { id: string; name: string; description: string; size: number; size_human: string; items: PrivacyItem[] }
@@ -45,6 +46,7 @@ function CategoryCard({ cat, totalSize, onClean, globalCleaning }: {
     cat: PrivacyCategory; totalSize: number;
     onClean: () => Promise<void>; globalCleaning: boolean;
 }) {
+    const { t } = useI18n();
     const [open,     setOpen]     = useState(false);
     const [cleaning, setCleaning] = useState(false);
     const [done,     setDone]     = useState(false);
@@ -105,7 +107,7 @@ function CategoryCard({ cat, totalSize, onClean, globalCleaning }: {
                         onMouseEnter={e => { if (!busy) e.currentTarget.style.background = "rgba(245,237,214,0.08)"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                     >
-                        {busy ? "…" : done ? "Temizlendi ✓" : "Temizle"}
+                        {busy ? "…" : done ? t("privacy.cleanedCheck") : t("privacy.clean")}
                     </button>
                 )}
 
@@ -130,8 +132,8 @@ function CategoryCard({ cat, totalSize, onClean, globalCleaning }: {
                                 {err
                                     ? <span style={{ color: "rgba(200,80,80,0.9)" }}>{err}</span>
                                     : done
-                                        ? <span style={{ color: "rgba(245,237,214,0.7)" }}>Temizlendi</span>
-                                        : `${cat.items.length} öğe`
+                                        ? <span style={{ color: "rgba(245,237,214,0.7)" }}>{t("privacy.cleaned")}</span>
+                                        : t("privacy.itemCount", { count: cat.items.length })
                                 }
                             </span>
                             <button
@@ -147,12 +149,12 @@ function CategoryCard({ cat, totalSize, onClean, globalCleaning }: {
                                 onMouseEnter={e => { if (!busy && !done) e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = busy ? "rgba(245,237,214,0.05)" : done ? "transparent" : "#F5EDD6"; }}
                             >
-                                {busy ? "Temizleniyor…" : done ? "Temizlendi ✓" : "Temizle"}
+                                {busy ? t("privacy.cleaning") : done ? t("privacy.cleanedCheck") : t("privacy.clean")}
                             </button>
                         </div>
                     )}
                     {cat.items.length === 0
-                        ? <p style={{ padding: "10px 16px", fontSize: 11, color: "rgba(245,237,214,0.28)", margin: 0 }}>Bulunamadı</p>
+                        ? <p style={{ padding: "10px 16px", fontSize: 11, color: "rgba(245,237,214,0.28)", margin: 0 }}>{t("privacy.noneFound")}</p>
                         : cat.items.map((item, i) => (
                             <div key={i} style={{
                                 display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -180,6 +182,7 @@ function CategoryCard({ cat, totalSize, onClean, globalCleaning }: {
 }
 
 export default function PrivacyPage() {
+    const { t } = useI18n();
     const toast = useToast();
     const [report,          setReport]          = useState<PrivacyReport | null>(null);
     const [scanning,        setScanning]        = useState(false);
@@ -204,13 +207,11 @@ export default function PrivacyPage() {
             if (paths.length > 0) {
                 const result = await invoke<string>("clean_junk_paths", { paths });
                 if (TCC_CATS.has(cat.id) && result.startsWith("0 ")) {
-                    throw new Error(
-                        "macOS erişimi engelledi — Ayarlar'dan Tam Disk Erişimi verin ve tekrar deneyin."
-                    );
+                    throw new Error(t("privacy.tccDeniedRetry"));
                 }
             }
         }
-    }, []);
+    }, [t]);
 
     const handleCleanAll = async () => {
         if (!report) return;
@@ -233,14 +234,14 @@ export default function PrivacyPage() {
             if (allPaths.length > 0 || hasDns) {
                 const result = await invoke<string>("clean_privacy_all", { paths: allPaths, flushDns: hasDns });
                 if (allPaths.length > 0 && result.startsWith("0 ")) {
-                    toast.error("Bazı dosyalar silinemedi — Ayarlar'dan Tam Disk Erişimi verin.");
+                    toast.error(t("privacy.someFilesFailed"));
                 }
             }
             if (hasClipboard) {
                 await invoke("clear_clipboard");
             }
 
-            setCleanAllMsg("Tümü temizlendi!");
+            setCleanAllMsg(t("privacy.allCleaned"));
             await scan();
         } catch (e) {
             toast.error(String(e));
@@ -254,7 +255,7 @@ export default function PrivacyPage() {
             {/* Page title + scan button */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#F5EDD6", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", letterSpacing: "-0.02em" }}>
-                    Gizlilik
+                    {t("privacy.title")}
                 </h1>
                 <button
                     onClick={scan} disabled={scanning}
@@ -270,7 +271,7 @@ export default function PrivacyPage() {
                     onMouseEnter={e => { if (!scanning) e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = scanning ? "rgba(245,237,214,0.07)" : "#F5EDD6"; }}
                 >
-                    {scanning ? "Taranıyor…" : "Şimdi Tara"}
+                    {scanning ? t("privacy.scanning") : t("privacy.scanNow")}
                 </button>
             </div>
 
@@ -280,7 +281,7 @@ export default function PrivacyPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span style={{ fontSize: 11, color: "rgba(245,237,214,0.4)", flex: 1 }}>
-                    Tarayıcı geçmişi ve çerezler için <strong style={{ color: "rgba(245,237,214,0.65)" }}>Tam Disk Erişimi</strong> gereklidir
+                    {t("privacy.tccBannerPre")} <strong style={{ color: "rgba(245,237,214,0.65)" }}>{t("privacy.fullDiskAccess")}</strong> {t("privacy.tccBannerPost")}
                 </span>
                 <button
                     onClick={() => invoke("open_system_settings")}
@@ -294,7 +295,7 @@ export default function PrivacyPage() {
                     onMouseEnter={e => { e.currentTarget.style.background = "rgba(245,237,214,0.18)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "rgba(245,237,214,0.1)"; }}
                 >
-                    Ayarları Aç
+                    {t("privacy.openSettings")}
                 </button>
             </div>
 
@@ -319,10 +320,10 @@ export default function PrivacyPage() {
                     }}>
                         <div>
                             <span style={{ fontSize: 26, fontWeight: 800, color: "#F5EDD6", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif" }}>
-                                {report.total_size > 0 ? report.total_size_human : "Temizlenmeye Hazır"}
+                                {report.total_size > 0 ? report.total_size_human : t("privacy.readyToClean")}
                             </span>
                             <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(245,237,214,0.32)" }}>
-                                {report.categories.length} gizlilik kategorisi bulundu
+                                {t("privacy.categoriesFound", { count: report.categories.length })}
                             </p>
                         </div>
 
@@ -333,7 +334,7 @@ export default function PrivacyPage() {
                                 </span>
                             )}
                             {cleaningAll && (
-                                <span style={{ fontSize: 12, color: "rgba(245,237,214,0.45)" }}>Temizleniyor…</span>
+                                <span style={{ fontSize: 12, color: "rgba(245,237,214,0.45)" }}>{t("privacy.cleaning")}</span>
                             )}
                             {!confirmCleanAll && !cleaningAll && (
                                 <button
@@ -347,12 +348,12 @@ export default function PrivacyPage() {
                                     onMouseEnter={e => { e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = "#F5EDD6"; }}
                                 >
-                                    Tümünü Temizle
+                                    {t("privacy.cleanAll")}
                                 </button>
                             )}
                             {confirmCleanAll && (
                                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                    <span style={{ fontSize: 11, color: "rgba(245,237,214,0.38)" }}>Emin misin?</span>
+                                    <span style={{ fontSize: 11, color: "rgba(245,237,214,0.38)" }}>{t("privacy.confirmSure")}</span>
                                     <button
                                         onClick={handleCleanAll}
                                         style={{
@@ -364,7 +365,7 @@ export default function PrivacyPage() {
                                         onMouseEnter={e => { e.currentTarget.style.background = "rgba(200,80,80,0.38)"; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = "rgba(200,80,80,0.22)"; }}
                                     >
-                                        Evet, Temizle
+                                        {t("privacy.yesClean")}
                                     </button>
                                     <button
                                         onClick={() => setConfirmCleanAll(false)}
@@ -375,7 +376,7 @@ export default function PrivacyPage() {
                                             borderRadius: 99, cursor: "pointer",
                                         }}
                                     >
-                                        Vazgeç
+                                        {t("privacy.cancel")}
                                     </button>
                                 </div>
                             )}
@@ -393,7 +394,7 @@ export default function PrivacyPage() {
                     ))}
 
                     <p style={{ fontSize: 11, color: "rgba(245,237,214,0.18)", textAlign: "center", margin: "4px 0 0" }}>
-                        En iyi sonuç için tarayıcıları kapatıp geçmişi temizleyin
+                        {t("privacy.closeBrowsersTip")}
                     </p>
                 </div>
             )}
@@ -402,10 +403,10 @@ export default function PrivacyPage() {
             {!report && !scanning && (
                 <div style={{ textAlign: "center", padding: "60px 0" }}>
                     <p style={{ fontSize: 18, fontWeight: 700, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.35)", margin: "0 0 8px" }}>
-                        Taramaya Hazır
+                        {t("privacy.readyToScan")}
                     </p>
                     <p style={{ fontSize: 12, color: "rgba(245,237,214,0.2)", margin: 0 }}>
-                        Özel verileri bulmak için "Şimdi Tara"ya tıklayın
+                        {t("privacy.emptyHint", { action: t("privacy.scanNow") })}
                     </p>
                 </div>
             )}

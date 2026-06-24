@@ -30,7 +30,7 @@ describe("RamPage", () => {
 
         expect(await screen.findByText("16.0 GB")).toBeInTheDocument();
         expect(screen.getByText("7.5 GB")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: /Temizle/ })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Free Up RAM/ })).toBeInTheDocument();
         expect(vi.mocked(invoke)).toHaveBeenCalledWith("get_ram_stats");
     });
 
@@ -40,10 +40,10 @@ describe("RamPage", () => {
         );
         render(<MemoryRouter><RamPage /></MemoryRouter>);
 
-        const btn = await screen.findByRole("button", { name: /Temizle/ });
+        const btn = await screen.findByRole("button", { name: /Free Up RAM/ });
         fireEvent.click(btn);
 
-        expect(await screen.findByText(/512 MB kurtarıldı/)).toBeInTheDocument();
+        expect(await screen.findByText(/512 MB reclaimed/)).toBeInTheDocument();
         expect(vi.mocked(invoke)).toHaveBeenCalledWith("optimize_ram");
     });
 });

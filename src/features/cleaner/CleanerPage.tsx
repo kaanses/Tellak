@@ -5,6 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "../../shared/store/toastStore";
 import { useAppStore } from "../../shared/store";
+import { useI18n } from "../../shared/i18n";
 
 interface JunkItem     { name: string; path: string; size: number; size_human: string }
 interface JunkCategory { id: string; name: string; description: string; size: number; size_human: string; items: JunkItem[] }
@@ -53,9 +54,10 @@ function Checkbox({ checked, indeterminate, onChange }: { checked: boolean; inde
 // ── Reveal button ─────────────────────────────────────────────────────────────
 
 function RevealButton({ path }: { path: string }) {
+    const { t } = useI18n();
     return (
         <button
-            title="Finder'da göster"
+            title={t("cleaner.revealInFinder")}
             onClick={e => { e.stopPropagation(); invoke("reveal_in_finder", { path }).catch(() => {}); }}
             style={{
                 flexShrink: 0, background: "transparent", border: "none",
@@ -105,6 +107,7 @@ function CategoryCard({
     totalSize: number;
     animationDelay: number;
 }) {
+    const { t } = useI18n();
     const [open, setOpen] = useState(false);
     const pct = totalSize > 0 && cat.size > 0 ? Math.min(100, (cat.size / totalSize) * 100) : 0;
 
@@ -153,7 +156,7 @@ function CategoryCard({
                                     border: "1px solid rgba(245,237,214,0.18)",
                                     padding: "1px 5px", borderRadius: 4,
                                 }}>
-                                    İNCELE
+                                    {t("cleaner.reviewBadge")}
                                 </span>
                             )}
                         </div>
@@ -196,7 +199,7 @@ function CategoryCard({
             {open && (
                 <div style={{ borderTop: "1px solid rgba(245,237,214,0.06)" }}>
                     {cat.items.length === 0
-                        ? <p style={{ padding: "10px 16px", fontSize: 11, color: "rgba(245,237,214,0.2)", margin: 0 }}>Bulunamadı</p>
+                        ? <p style={{ padding: "10px 16px", fontSize: 11, color: "rgba(245,237,214,0.2)", margin: 0 }}>{t("cleaner.empty")}</p>
                         : cat.items.map((item, i) => {
                             const itemChecked = checkedPaths.has(item.path);
                             return (
@@ -253,6 +256,7 @@ function ConfirmModal({
     onConfirm: () => void;
     onCancel: () => void;
 }) {
+    const { t } = useI18n();
     const total = categories.reduce((s, c) => s + c.size, 0);
 
     return createPortal(
@@ -274,10 +278,10 @@ function ConfirmModal({
                         fontFamily: "'New York', 'Iowan Old Style', Georgia, serif",
                         fontSize: 22, fontWeight: 900, color: "#F5EDD6", letterSpacing: "-0.02em",
                     }}>
-                        {humanize(total)} silinsin mi?
+                        {t("cleaner.confirmTitle", { size: humanize(total) })}
                     </p>
                     <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.3)" }}>
-                        Aşağıdaki dosyalar kalıcı olarak silinecek:
+                        {t("cleaner.confirmSubtitle")}
                     </p>
                 </div>
 
@@ -291,7 +295,7 @@ function ConfirmModal({
                         }}>
                             <div>
                                 <span style={{ fontSize: 12, color: "rgba(245,237,214,0.65)" }}>{c.name}</span>
-                                <span style={{ fontSize: 10, color: "rgba(245,237,214,0.2)", marginLeft: 6 }}>{c.count} dosya</span>
+                                <span style={{ fontSize: 10, color: "rgba(245,237,214,0.2)", marginLeft: 6 }}>{t("cleaner.fileCount", { count: c.count })}</span>
                             </div>
                             <span style={{ fontSize: 12, fontFamily: "monospace", color: "rgba(245,237,214,0.7)" }}>{c.size_human}</span>
                         </div>
@@ -299,7 +303,7 @@ function ConfirmModal({
                 </div>
 
                 <p style={{ margin: 0, fontSize: 11, color: "rgba(245,237,214,0.18)" }}>
-                    Bu işlem geri alınamaz.
+                    {t("cleaner.irreversible")}
                 </p>
 
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -315,7 +319,7 @@ function ConfirmModal({
                         onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(245,237,214,0.22)"; e.currentTarget.style.color = "rgba(245,237,214,0.65)"; }}
                         onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(245,237,214,0.1)"; e.currentTarget.style.color = "rgba(245,237,214,0.4)"; }}
                     >
-                        Vazgeç
+                        {t("cleaner.cancel")}
                     </button>
                     <button
                         onClick={onConfirm}
@@ -328,7 +332,7 @@ function ConfirmModal({
                         onMouseEnter={e => { e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                         onMouseLeave={e => { e.currentTarget.style.background = "#F5EDD6"; }}
                     >
-                        Sil
+                        {t("cleaner.delete")}
                     </button>
                 </div>
             </div>
@@ -343,6 +347,7 @@ export default function CleanerPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const { fetchSystemStatus } = useAppStore();
+    const { t } = useI18n();
     const [categories,   setCategories]   = useState<JunkCategory[]>([]);
     const [totalSize,    setTotalSize]    = useState(0);
     const [checkedItems, setCheckedItems] = useState<Record<string, Set<string>>>({});
@@ -482,25 +487,25 @@ export default function CleanerPage() {
 
         // Password obtained (or not needed) — now show cleaning state
         setCleaning(true);
-        setCleanStatus("Temizleniyor…");
+        setCleanStatus(t("cleaner.statusCleaning"));
 
         if (snapshotNames.length > 0) {
-            setCleanStatus("Anlık görüntüler siliniyor…");
+            setCleanStatus(t("cleaner.statusSnapshots"));
             try { await invoke<string>("delete_apfs_snapshots", { names: snapshotNames }); }
-            catch (e) { toast.error(`Snapshots: ${String(e)}`); }
+            catch (e) { toast.error(`${t("cleaner.errSnapshots")}: ${String(e)}`); }
         }
         if (includesTrash) {
-            setCleanStatus("Çöp kutusu boşaltılıyor…");
+            setCleanStatus(t("cleaner.statusTrash"));
             try { await invoke<void>("empty_trash"); }
-            catch (e) { toast.error(`Çöp kutusu: ${String(e)}`); }
+            catch (e) { toast.error(`${t("cleaner.errTrash")}: ${String(e)}`); }
         }
         if (regularPaths.length > 0) {
-            setCleanStatus("Dosyalar siliniyor…");
+            setCleanStatus(t("cleaner.statusFiles"));
             try { await invoke<string>("clean_junk_paths", { paths: regularPaths }); }
-            catch (e) { toast.error(`Temizlik: ${String(e)}`); }
+            catch (e) { toast.error(`${t("cleaner.errClean")}: ${String(e)}`); }
         }
 
-        setCleanStatus("Tamamlandı");
+        setCleanStatus(t("cleaner.statusDone"));
         setCleaning(false);
         setFreedBytes(sizeBefore);
         fetchSystemStatus(true);
@@ -538,12 +543,12 @@ export default function CleanerPage() {
                         fontFamily: "'New York', 'Iowan Old Style', Georgia, serif",
                         fontSize: 28, fontWeight: 900, color: "#F5EDD6", letterSpacing: "-0.03em",
                     }}>
-                        Temizleyici
+                        {t("cleaner.title")}
                     </h1>
                     <p style={{ margin: 0, fontSize: 12, color: "rgba(245,237,214,0.28)", lineHeight: 1.5 }}>
                         {scanning
-                            ? `${scanCount} / ${TOTAL_CATS} kategori tarandı`
-                            : "Önbellek, tarayıcı ve geçici dosyaları temizleyin"
+                            ? t("cleaner.scanProgress", { count: scanCount, total: TOTAL_CATS })
+                            : t("cleaner.subtitle")
                         }
                     </p>
                 </div>
@@ -571,7 +576,7 @@ export default function CleanerPage() {
                                 animation: "spin 0.75s linear infinite",
                             }} />
                         )}
-                        {scanning ? "Taranıyor…" : !hasScanned ? "Tara" : "Yeniden Tara"}
+                        {scanning ? t("cleaner.scanning") : !hasScanned ? t("cleaner.scan") : t("cleaner.rescan")}
                     </button>
 
                     {/* Clean button */}
@@ -589,7 +594,7 @@ export default function CleanerPage() {
                             onMouseEnter={e => { if (canClean) e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                             onMouseLeave={e => { if (canClean) e.currentTarget.style.background = "#F5EDD6"; }}
                         >
-                            {cleaning ? cleanStatus || "Temizleniyor…" : canClean ? `Temizle · ${humanize(checkedSize)}` : "Temizle"}
+                            {cleaning ? cleanStatus || t("cleaner.statusCleaning") : canClean ? t("cleaner.cleanWithSize", { size: humanize(checkedSize) }) : t("cleaner.clean")}
                         </button>
                     )}
                 </div>
@@ -608,14 +613,14 @@ export default function CleanerPage() {
                         onMouseEnter={e => { e.currentTarget.style.color = "rgba(245,237,214,0.6)"; }}
                         onMouseLeave={e => { e.currentTarget.style.color = "rgba(245,237,214,0.3)"; }}
                     >
-                        {allSelected ? "Seçimi kaldır" : "Tümünü seç"}
+                        {allSelected ? t("cleaner.deselectAll") : t("cleaner.selectAll")}
                     </button>
                     <span style={{ fontSize: 11, color: "rgba(245,237,214,0.15)" }}>
-                        · {selectedItemCount} / {totalItemCount} dosya seçili
+                        · {t("cleaner.selectedCount", { selected: selectedItemCount, total: totalItemCount })}
                     </span>
                     {totalSize > 0 && !scanning && (
                         <span style={{ fontSize: 11, color: "rgba(245,237,214,0.15)" }}>
-                            · {humanize(totalSize)} toplam
+                            · {t("cleaner.totalSize", { size: humanize(totalSize) })}
                         </span>
                     )}
                 </div>
@@ -628,7 +633,7 @@ export default function CleanerPage() {
                         <>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(245,237,214,0.2)", textTransform: "uppercase" }}>
-                                    Güvenle Temizlenebilir
+                                    {t("cleaner.safeToClean")}
                                 </span>
                                 <div style={{ flex: 1, height: 1, background: "rgba(245,237,214,0.05)" }} />
                             </div>
@@ -646,7 +651,7 @@ export default function CleanerPage() {
                         <>
                             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, marginBottom: 2 }}>
                                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(245,237,214,0.35)", textTransform: "uppercase" }}>
-                                    Önce İncele
+                                    {t("cleaner.reviewFirst")}
                                 </span>
                                 <div style={{ flex: 1, height: 1, background: "rgba(245,237,214,0.08)" }} />
                             </div>
@@ -677,10 +682,10 @@ export default function CleanerPage() {
                         fontSize: 22, fontWeight: 900, color: "rgba(245,237,214,0.5)",
                         margin: "0 0 8px", letterSpacing: "-0.02em",
                     }}>
-                        Tertemiz
+                        {t("cleaner.allCleanTitle")}
                     </p>
                     <p style={{ fontSize: 12, color: "rgba(245,237,214,0.2)", margin: 0 }}>
-                        Mac'inizde temizlenecek bir şey bulunamadı.
+                        {t("cleaner.allCleanBody")}
                     </p>
                 </div>
             )}
@@ -693,10 +698,10 @@ export default function CleanerPage() {
                         fontSize: 22, fontWeight: 900, color: "rgba(245,237,214,0.18)",
                         margin: "0 0 10px", letterSpacing: "-0.02em",
                     }}>
-                        Henüz Taranmadı
+                        {t("cleaner.preScanTitle")}
                     </p>
                     <p style={{ fontSize: 12, color: "rgba(245,237,214,0.15)", margin: 0 }}>
-                        Temizlenebilir dosyaları bulmak için "Tara" düğmesine basın.
+                        {t("cleaner.preScanBody")}
                     </p>
                 </div>
             )}
@@ -736,10 +741,10 @@ export default function CleanerPage() {
                                 fontFamily: "'New York', 'Iowan Old Style', Georgia, serif",
                                 fontSize: 28, fontWeight: 900, color: "#F5EDD6", letterSpacing: "-0.03em",
                             }}>
-                                {humanize(freedBytes)} temizlendi
+                                {t("cleaner.freedTitle", { size: humanize(freedBytes) })}
                             </p>
                             <p style={{ margin: 0, fontSize: 13, color: "rgba(245,237,214,0.3)" }}>
-                                Mac'iniz biraz daha temiz
+                                {t("cleaner.freedBody")}
                             </p>
                         </div>
                     </div>

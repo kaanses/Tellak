@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-ro
 import "./App.css";
 import tellakIcon from "./assets/tellak-icon.png";
 import { ToastContainer } from "./shared/components/ToastContainer";
+import { useI18n } from "./shared/i18n";
 import Dashboard       from "./features/dashboard/Dashboard";
 import CleanerPage     from "./features/cleaner/CleanerPage";
 import AnalyzerPage    from "./features/analyzer/AnalyzerPage";
@@ -17,39 +18,39 @@ import PrivacyPage     from "./features/privacy/PrivacyPage";
 
 const NAV = [
     {
-        path: "/", label: "Ana Sayfa",
+        path: "/", label: "nav.home",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
     },
     {
-        path: "/clean", label: "Temizleyici",
+        path: "/clean", label: "nav.cleaner",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>,
     },
     {
-        path: "/analyze", label: "Disk",
+        path: "/analyze", label: "nav.disk",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>,
     },
     {
-        path: "/apps", label: "Uygulamalar",
+        path: "/apps", label: "nav.apps",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
     },
     {
-        path: "/startup", label: "Başlangıç",
+        path: "/startup", label: "nav.startup",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
     },
     {
-        path: "/duplicates", label: "Kopyaları Bul",
+        path: "/duplicates", label: "nav.duplicates",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
     },
     {
-        path: "/trash", label: "Çöp Kutusu",
+        path: "/trash", label: "nav.trash",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/><path d="M9 6V4h6v2"/></svg>,
     },
     {
-        path: "/ram", label: "RAM",
+        path: "/ram", label: "nav.ram",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="8" width="20" height="8" rx="2"/><path d="M6 8V6M10 8V6M14 8V6M18 8V6M6 16v2M10 16v2M14 16v2M18 16v2"/></svg>,
     },
     {
-        path: "/privacy", label: "Gizlilik",
+        path: "/privacy", label: "nav.privacy",
         icon: <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
     },
 ];
@@ -57,6 +58,7 @@ const NAV = [
 function Sidebar() {
     const location  = useLocation();
     const navigate  = useNavigate();
+    const { t, lang, setLang } = useI18n();
     const [expanded, setExpanded] = useState(false);
 
     return (
@@ -135,7 +137,7 @@ function Sidebar() {
                     return (
                         <button
                             key={item.path}
-                            title={expanded ? undefined : item.label}
+                            title={expanded ? undefined : t(item.label)}
                             onClick={() => navigate(item.path)}
                             style={{
                                 display: "flex",
@@ -187,7 +189,7 @@ function Sidebar() {
                                             whiteSpace: "nowrap",
                                         }}
                                     >
-                                        {item.label}
+                                        {t(item.label)}
                                     </motion.span>
                                 )}
                             </AnimatePresence>
@@ -195,12 +197,47 @@ function Sidebar() {
                     );
                 })}
             </nav>
+
+            {/* Language toggle (sidebar footer) */}
+            <div style={{ flexShrink: 0, padding: "6px 8px 0", display: "flex", justifyContent: "center" }}>
+                <button
+                    onClick={() => setLang(lang === "tr" ? "en" : "tr")}
+                    title={lang === "tr" ? "Switch to English" : "Türkçe'ye geç"}
+                    style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "7px 10px", borderRadius: 10, border: "none",
+                        background: "transparent", color: "rgba(245,237,214,0.45)",
+                        cursor: "pointer", width: "100%", justifyContent: "center",
+                        whiteSpace: "nowrap", overflow: "hidden",
+                        transition: "background 0.12s, color 0.12s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "rgba(245,237,214,0.7)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(245,237,214,0.45)"; }}
+                >
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <AnimatePresence>
+                        {expanded && (
+                            <motion.span
+                                key="lang-label"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                transition={{ type: "spring", stiffness: 320, damping: 24 }}
+                                style={{ fontSize: 12, fontWeight: 600, pointerEvents: "none", whiteSpace: "nowrap", letterSpacing: "0.04em" }}
+                            >
+                                {lang === "tr" ? "Türkçe · EN" : "English · TR"}
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
+                </button>
+            </div>
         </motion.aside>
     );
 }
 
 function UpdateBanner() {
     const { available, version, installing, install, dismiss } = useUpdater();
+    const { t } = useI18n();
     if (!available) return null;
     return (
         <div style={{
@@ -213,10 +250,10 @@ function UpdateBanner() {
         }}>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#F5EDD6" }}>
-                    Tellak {version} hazır
+                    {t("update.ready", { version: version ?? "" })}
                 </div>
                 <div style={{ fontSize: 12, color: "rgba(245,237,214,0.5)", marginTop: 2 }}>
-                    Yeni bir güncelleme mevcut
+                    {t("update.available")}
                 </div>
             </div>
             <button
@@ -229,7 +266,7 @@ function UpdateBanner() {
                     opacity: installing ? 0.6 : 1, flexShrink: 0,
                 }}
             >
-                {installing ? "Yükleniyor…" : "Güncelle"}
+                {installing ? t("update.installing") : t("update.install")}
             </button>
             <button
                 onClick={dismiss}

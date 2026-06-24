@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useToast } from "../../shared/store/toastStore";
+import { useI18n } from "../../shared/i18n";
 
 export interface DuplicateFile {
     name: string;
@@ -43,12 +44,12 @@ const card = {
 export type KeepStrategy = "newest" | "oldest" | "shallowest";
 
 const DIR_OPTIONS = [
-    { label: "İndirilenler", sub: "Downloads" },
-    { label: "Belgeler",     sub: "Documents" },
-    { label: "Masaüstü",     sub: "Desktop" },
-    { label: "Resimler",     sub: "Pictures" },
-    { label: "Filmler",      sub: "Movies" },
-    { label: "Müzik",        sub: "Music" },
+    { labelKey: "dirDownloads", sub: "Downloads" },
+    { labelKey: "dirDocuments", sub: "Documents" },
+    { labelKey: "dirDesktop",   sub: "Desktop" },
+    { labelKey: "dirPictures",  sub: "Pictures" },
+    { labelKey: "dirMovies",    sub: "Movies" },
+    { labelKey: "dirMusic",     sub: "Music" },
 ];
 
 export function formatDate(unix: number) {
@@ -85,10 +86,11 @@ export function pickKeeper(live: DuplicateFile[], strategy: KeepStrategy): strin
 }
 
 function StrategyPicker({ value, onChange }: { value: KeepStrategy; onChange: (s: KeepStrategy) => void }) {
+    const { t } = useI18n();
     const opts: { key: KeepStrategy; label: string }[] = [
-        { key: "newest",     label: "En Yeni" },
-        { key: "oldest",     label: "En Eski" },
-        { key: "shallowest", label: "En Sığ" },
+        { key: "newest",     label: t("duplicates.strategyNewest") },
+        { key: "oldest",     label: t("duplicates.strategyOldest") },
+        { key: "shallowest", label: t("duplicates.strategyShallowest") },
     ];
     return (
         <div style={{ display: "flex", gap: 4 }}>
@@ -114,6 +116,7 @@ function StrategyPicker({ value, onChange }: { value: KeepStrategy; onChange: (s
 function GroupCard({ group, strategy, onTrash }: {
     group: MutableGroup; strategy: KeepStrategy; onTrash: (path: string) => Promise<void>;
 }) {
+    const { t } = useI18n();
     const [open,     setOpen]     = useState(true);
     const [trashing, setTrashing] = useState<string | null>(null);
     const [keepBusy, setKeepBusy] = useState(false);
@@ -158,13 +161,13 @@ function GroupCard({ group, strategy, onTrash }: {
 
                 <div style={{ flex: 1, display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 13, fontWeight: 600, color: "#F5EDD6" }}>
-                        {live.length} kopya
+                        {t("duplicates.copies", { count: live.length })}
                     </span>
                     <span style={{ fontSize: 12, color: "rgba(245,237,214,0.32)" }}>
-                        her biri {group.size_human}
+                        {t("duplicates.each", { size: group.size_human })}
                     </span>
                     <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(245,237,214,0.7)", marginLeft: "auto" }}>
-                        {formatBytes(group.wasted)} israf
+                        {t("duplicates.wasted", { size: formatBytes(group.wasted) })}
                     </span>
                 </div>
 
@@ -182,7 +185,7 @@ function GroupCard({ group, strategy, onTrash }: {
                     onMouseEnter={e => { if (!keepBusy) e.currentTarget.style.background = "rgba(245,237,214,0.1)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                 >
-                    {keepBusy ? "…" : "1 Tut"}
+                    {keepBusy ? "…" : t("duplicates.keepOne")}
                 </button>
 
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
@@ -224,7 +227,7 @@ function GroupCard({ group, strategy, onTrash }: {
                                                 padding: "1px 5px", borderRadius: 4,
                                                 letterSpacing: "0.08em",
                                             }}>
-                                                SAKLA
+                                                {t("duplicates.keepBadge")}
                                             </span>
                                         )}
                                     </div>
@@ -245,7 +248,7 @@ function GroupCard({ group, strategy, onTrash }: {
                                 <button
                                     onClick={() => handleTrash(file)}
                                     disabled={busy || isKept}
-                                    title={isKept ? "Bu dosya saklanacak" : "Çöp kutusuna taşı"}
+                                    title={isKept ? t("duplicates.willKeepTip") : t("duplicates.moveToTrashTip")}
                                     style={{
                                         padding: "4px 12px", fontSize: 11,
                                         color: busy || isKept ? "rgba(245,237,214,0.18)" : "rgba(210,90,90,0.9)",
@@ -258,7 +261,7 @@ function GroupCard({ group, strategy, onTrash }: {
                                     onMouseEnter={e => { if (!busy && !isKept) { e.currentTarget.style.background = "rgba(200,80,80,0.1)"; e.currentTarget.style.borderColor = "rgba(200,80,80,0.5)"; } }}
                                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = busy || isKept ? "rgba(245,237,214,0.06)" : "rgba(200,80,80,0.28)"; }}
                                 >
-                                    {busy ? "…" : "Sil"}
+                                    {busy ? "…" : t("duplicates.delete")}
                                 </button>
                             </div>
                         );
@@ -270,6 +273,7 @@ function GroupCard({ group, strategy, onTrash }: {
 }
 
 export default function DuplicatesPage() {
+    const { t } = useI18n();
     const toast = useToast();
     const [home,         setHome]         = useState<string>("");
     const [selectedDirs, setSelectedDirs] = useState<Set<string>>(
@@ -361,7 +365,7 @@ export default function DuplicatesPage() {
                 }));
             } catch { failed++; }
         }
-        if (failed > 0) toast.error(`${failed} dosya çöp kutusuna taşınamadı.`);
+        if (failed > 0) toast.error(t("duplicates.trashFailed", { count: failed }));
         setCleaningAll(false);
     };
 
@@ -376,7 +380,7 @@ export default function DuplicatesPage() {
 
             {/* Page title */}
             <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#F5EDD6", fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", letterSpacing: "-0.02em" }}>
-                Kopyalar
+                {t("duplicates.title")}
             </h1>
 
             {/* Toolbar */}
@@ -397,7 +401,7 @@ export default function DuplicatesPage() {
                                     border:     active ? "1px solid rgba(245,237,214,0.35)" : "1px solid rgba(245,237,214,0.1)",
                                 }}
                             >
-                                {d.label}
+                                {t(`duplicates.${d.labelKey}`)}
                             </button>
                         );
                     })}
@@ -417,7 +421,7 @@ export default function DuplicatesPage() {
                     onMouseEnter={e => { if (!scanning) e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = scanning ? "rgba(245,237,214,0.07)" : "#F5EDD6"; }}
                 >
-                    {scanning ? "Taranıyor…" : "Şimdi Tara"}
+                    {scanning ? t("duplicates.scanning") : t("duplicates.scanNow")}
                 </button>
             </div>
 
@@ -433,10 +437,10 @@ export default function DuplicatesPage() {
                         }} />
                         <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(245,237,214,0.7)" }}>
                             {!progress || progress.phase === "walking"
-                                ? `Dosyalar taranıyor… ${progress ? progress.count.toLocaleString("tr-TR") : ""}`
+                                ? t("duplicates.scanningFiles", { count: progress ? progress.count.toLocaleString("tr-TR") : "" })
                                 : progress.phase === "hashing"
-                                ? `Hash hesaplanıyor… ${progress.count.toLocaleString("tr-TR")} / ${progress.total.toLocaleString("tr-TR")}`
-                                : "Tamamlanıyor…"
+                                ? t("duplicates.hashing", { count: progress.count.toLocaleString("tr-TR"), total: progress.total.toLocaleString("tr-TR") })
+                                : t("duplicates.finalizing")
                             }
                         </span>
                     </div>
@@ -474,16 +478,16 @@ export default function DuplicatesPage() {
                             {report.total_wasted_human}
                         </span>
                         <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(245,237,214,0.32)" }}>
-                            {report.groups.length} kopya grubunda israf · {report.files_scanned.toLocaleString("tr-TR")} dosya tarandı
+                            {t("duplicates.summaryLine", { groups: report.groups.length, files: report.files_scanned.toLocaleString("tr-TR") })}
                         </p>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "flex-end" }}>
                         {savedBytes > 0 && (
                             <div style={{ textAlign: "right" }}>
                                 <span style={{ fontSize: 16, fontWeight: 700, color: "rgba(245,237,214,0.7)" }}>
-                                    {formatBytes(savedBytes)} kurtarıldı
+                                    {t("duplicates.recovered", { size: formatBytes(savedBytes) })}
                                 </span>
-                                <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(245,237,214,0.25)" }}>bu oturumda</p>
+                                <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgba(245,237,214,0.25)" }}>{t("duplicates.thisSession")}</p>
                             </div>
                         )}
                         {activeGroups.length > 0 && (
@@ -503,7 +507,7 @@ export default function DuplicatesPage() {
                                     onMouseEnter={e => { if (!cleaningAll) e.currentTarget.style.background = "rgba(245,237,214,0.82)"; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = cleaningAll ? "rgba(245,237,214,0.07)" : "#F5EDD6"; }}
                                 >
-                                    {cleaningAll ? "Temizleniyor…" : "Tümünü Temizle"}
+                                    {cleaningAll ? t("duplicates.cleaning") : t("duplicates.cleanAll")}
                                 </button>
                             </>
                         )}
@@ -515,10 +519,10 @@ export default function DuplicatesPage() {
             {report && !scanning && report.groups.length === 0 && (
                 <div style={{ textAlign: "center", padding: "52px 0" }}>
                     <p style={{ fontSize: 18, fontWeight: 700, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.4)", margin: "0 0 8px" }}>
-                        Kopya bulunamadı
+                        {t("duplicates.noneFound")}
                     </p>
                     <p style={{ fontSize: 12, color: "rgba(245,237,214,0.22)", margin: 0 }}>
-                        Seçili klasörleriniz temiz
+                        {t("duplicates.noneFoundSub")}
                     </p>
                 </div>
             )}
@@ -527,10 +531,10 @@ export default function DuplicatesPage() {
             {report && !scanning && report.groups.length > 0 && activeGroups.length === 0 && (
                 <div style={{ textAlign: "center", padding: "52px 0" }}>
                     <p style={{ fontSize: 18, fontWeight: 700, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.45)", margin: "0 0 8px" }}>
-                        Tüm kopyalar çözümlendi
+                        {t("duplicates.allResolved")}
                     </p>
                     <p style={{ fontSize: 12, color: "rgba(245,237,214,0.22)", margin: 0 }}>
-                        Daha fazlası için yeniden tarayın
+                        {t("duplicates.allResolvedSub")}
                     </p>
                 </div>
             )}
@@ -553,10 +557,10 @@ export default function DuplicatesPage() {
             {!report && !scanning && (
                 <div style={{ textAlign: "center", padding: "60px 0" }}>
                     <p style={{ fontSize: 18, fontWeight: 700, fontFamily: "'New York', 'Iowan Old Style', Georgia, serif", color: "rgba(245,237,214,0.35)", margin: "0 0 8px" }}>
-                        Kopya dosyaları bul
+                        {t("duplicates.emptyTitle")}
                     </p>
                     <p style={{ fontSize: 12, color: "rgba(245,237,214,0.2)", margin: 0 }}>
-                        SHA-256 doğrulamalı · yukarıdan klasör seçin ve tarayın
+                        {t("duplicates.emptySub")}
                     </p>
                 </div>
             )}

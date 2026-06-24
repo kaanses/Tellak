@@ -69,7 +69,7 @@ pub async fn clean_language_files(paths: Vec<String>) -> Result<String, String> 
         }
 
         super::analyze::clear_junk_cache();
-        Ok(format!("{} dil paketi kaldırıldı", removed))
+        Ok(format!("{} language packs removed", removed))
     })
     .await
     .map_err(|e| e.to_string())?
@@ -142,7 +142,7 @@ pub async fn clean_junk_paths(paths: Vec<String>) -> Result<String, String> {
         }
 
         super::analyze::clear_junk_cache();
-        Ok(format!("{} öğe kaldırıldı", removed))
+        Ok(format!("{} items removed", removed))
     })
     .await
     .map_err(|e| e.to_string())?
