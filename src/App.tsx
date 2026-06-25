@@ -6,6 +6,7 @@ import "./App.css";
 import tellakIcon from "./assets/tellak-icon.png";
 import { ToastContainer } from "./shared/components/ToastContainer";
 import { useI18n } from "./shared/i18n";
+import { invoke } from "@tauri-apps/api/core";
 import Dashboard       from "./features/dashboard/Dashboard";
 import CleanerPage     from "./features/cleaner/CleanerPage";
 import AnalyzerPage    from "./features/analyzer/AnalyzerPage";
@@ -235,8 +236,10 @@ function Sidebar() {
     );
 }
 
+const DOWNLOAD_URL = "https://tellak.app";
+
 function UpdateBanner() {
-    const { available, version, installing, install, dismiss } = useUpdater();
+    const { available, version, installing, error, install, dismiss } = useUpdater();
     const { t } = useI18n();
     if (!available) return null;
     return (
@@ -252,12 +255,12 @@ function UpdateBanner() {
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#F5EDD6" }}>
                     {t("update.ready", { version: version ?? "" })}
                 </div>
-                <div style={{ fontSize: 12, color: "rgba(245,237,214,0.5)", marginTop: 2 }}>
-                    {t("update.available")}
+                <div style={{ fontSize: 12, color: error ? "rgba(255,170,90,0.9)" : "rgba(245,237,214,0.5)", marginTop: 2 }}>
+                    {error ? t("update.failed") : t("update.available")}
                 </div>
             </div>
             <button
-                onClick={install}
+                onClick={error ? () => { invoke("open_url", { url: DOWNLOAD_URL }); } : install}
                 disabled={installing}
                 style={{
                     padding: "6px 12px", borderRadius: 7, border: "none",
@@ -266,7 +269,7 @@ function UpdateBanner() {
                     opacity: installing ? 0.6 : 1, flexShrink: 0,
                 }}
             >
-                {installing ? t("update.installing") : t("update.install")}
+                {installing ? t("update.installing") : error ? t("update.download") : t("update.install")}
             </button>
             <button
                 onClick={dismiss}

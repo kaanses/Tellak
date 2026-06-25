@@ -186,9 +186,32 @@ pub async fn reveal_in_finder(path: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Opens a URL in the default browser. Only http(s) URLs are allowed.
+#[tauri::command]
+pub async fn open_url(url: String) -> Result<(), String> {
+    if !(url.starts_with("https://") || url.starts_with("http://")) {
+        return Err("only http(s) URLs are allowed".to_string());
+    }
+    std::process::Command::new("open")
+        .arg(&url)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── open_url ────────────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn open_url_rejects_non_http_schemes() {
+        assert!(open_url("file:///etc/passwd".to_string()).await.is_err());
+        assert!(open_url("javascript:alert(1)".to_string()).await.is_err());
+        assert!(open_url("ftp://example.com".to_string()).await.is_err());
+        assert!(open_url(String::new()).await.is_err());
+    }
 
     // ── is_safe_to_delete ──────────────────────────────────────────────────
 

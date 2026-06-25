@@ -6,6 +6,7 @@ export function useUpdater() {
     const [update, setUpdate]         = useState<Update | null>(null);
     const [installing, setInstalling] = useState(false);
     const [dismissed, setDismissed]   = useState(false);
+    const [error, setError]           = useState<string | null>(null);
 
     useEffect(() => {
         // Check 4s after launch so it doesn't delay startup
@@ -23,10 +24,17 @@ export function useUpdater() {
     const install = async () => {
         if (!update) return;
         setInstalling(true);
+        setError(null);
         try {
             await update.downloadAndInstall();
             await relaunch();
-        } catch {
+        } catch (e) {
+            // Surface the failure instead of looking like a dead button. The
+            // common causes are: the app is running from the DMG / outside
+            // /Applications (can't overwrite itself), or an older build whose
+            // baked updater pubkey can't verify the new signature. In both
+            // cases the user must download the new build manually.
+            setError(String(e));
             setInstalling(false);
         }
     };
@@ -35,6 +43,7 @@ export function useUpdater() {
         version:   update?.version ?? null,
         available: !!update && !dismissed,
         installing,
+        error,
         install,
         dismiss:   () => setDismissed(true),
     };

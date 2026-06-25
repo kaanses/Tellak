@@ -40,6 +40,7 @@ pub fn run() {
             commands::request_admin_auth,
             commands::open_system_settings,
             commands::reveal_in_finder,
+            commands::open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -14,6 +14,8 @@ export const tr: Record<string, string> = {
     "update.available": "Yeni bir güncelleme mevcut",
     "update.installing": "Yükleniyor…",
     "update.install": "Güncelle",
+    "update.failed": "Güncelleme başarısız — manuel olarak indir",
+    "update.download": "İndir",
 
     // ── Dashboard ───────────────────────────────────────────────────────────
     "dashboard.scanCta": "TARA",

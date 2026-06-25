@@ -15,6 +15,8 @@ export const en: Record<string, string> = {
     "update.available": "A new update is available",
     "update.installing": "Installing…",
     "update.install": "Update",
+    "update.failed": "Update failed — download it manually",
+    "update.download": "Download",
 
     // ── Dashboard ───────────────────────────────────────────────────────────
     "dashboard.scanCta": "SCAN",
